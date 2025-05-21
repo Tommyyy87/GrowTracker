@@ -10,7 +10,8 @@ class AppTheme {
         seedColor: AppColors.primaryColor,
         primary: AppColors.primaryColor,
         secondary: AppColors.accentColor,
-        background: AppColors.backgroundColor,
+        surface:
+            AppColors.backgroundColor, // Geändert von 'background' zu 'surface'
         error: AppColors.errorColor,
       ),
       appBarTheme: const AppBarTheme(

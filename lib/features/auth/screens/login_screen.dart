@@ -127,9 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       AppStrings.loginSubtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         color: Colors.white70,
                       ),
@@ -187,7 +187,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(8),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red
+                              .withAlpha(26), // Ersetzt withOpacity(0.1)
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.red.shade300),
                         ),

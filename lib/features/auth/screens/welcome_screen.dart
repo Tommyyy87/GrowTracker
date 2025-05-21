@@ -13,7 +13,7 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -30,20 +30,20 @@ class WelcomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const SizedBox(height: 40),
-                Column(
+                const Column(
                   children: [
-                    const AppLogo(size: 100),
-                    const SizedBox(height: 24),
+                    AppLogo(size: 100),
+                    SizedBox(height: 24),
                     Text(
                       AppStrings.appName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: 16),
+                    Text(
                       "Willkommen bei ${AppStrings.appName}!",
                       textAlign: TextAlign.center,
                       style: TextStyle(
