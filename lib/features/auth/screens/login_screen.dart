@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
@@ -6,7 +8,6 @@ import '../controllers/auth_controller.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/social_login_button.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,8 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        // Weiterleitung zur Hauptseite
-        // TODO: Zur Hauptseite navigieren
+        if (mounted) {
+          context.goNamed('dashboard');
+        }
       } else {
         setState(() {
           _errorMessage =
@@ -76,6 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authController.signInWithGoogle();
       // Bei Erfolg erfolgt die Weiterleitung automatisch
+      if (mounted) {
+        context.goNamed('dashboard');
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
@@ -95,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: const Text('Willkommen zurück!',
             style: TextStyle(color: Colors.white)),
       ),
       extendBodyBehindAppBar: true,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -163,7 +168,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Passwort-Wiederherstellung
+                          // Passwort-Wiederherstellung
+                          // Implementiere Passwort-Reset-Workflow
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'Passwort-Wiederherstellung wird bald implementiert.'),
+                            ),
+                          );
                         },
                         child: const Text(
                           AppStrings.forgotPassword,
@@ -213,11 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const RegisterScreen(),
-                              ),
-                            );
+                            context.goNamed('register');
                           },
                           child: const Text(
                             AppStrings.signUp,

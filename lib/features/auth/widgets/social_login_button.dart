@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/assets_path.dart';
 
 class SocialLoginButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -32,7 +33,11 @@ class SocialLoginButton extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
             )
-          : const Icon(Icons.g_mobiledata, size: 24),
+          : Image.asset(
+              AssetsPath.googleIcon,
+              width: 24,
+              height: 24,
+            ),
       label: const Text(
         AppStrings.googleSignIn,
         style: TextStyle(color: Colors.black87),

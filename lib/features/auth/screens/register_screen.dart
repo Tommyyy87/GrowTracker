@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/validators.dart';
@@ -6,7 +8,6 @@ import '../controllers/auth_controller.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/social_login_button.dart';
-import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -51,8 +52,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (success) {
-        // Weiterleitung zur Hauptseite
-        // TODO: Zur Hauptseite navigieren
+        if (mounted) {
+          context.goNamed('dashboard');
+        }
       } else {
         setState(() {
           _errorMessage =
@@ -78,7 +80,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await _authController.signInWithGoogle();
-      // Bei Erfolg erfolgt die Weiterleitung automatisch
+      if (mounted) {
+        context.goNamed('dashboard');
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
@@ -98,14 +102,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
         title: const Text(AppStrings.registerTitle,
             style: TextStyle(color: Colors.white)),
       ),
       extendBodyBehindAppBar: true,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -214,11 +218,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
-                            );
+                            context.goNamed('login');
                           },
                           child: const Text(
                             AppStrings.signIn,

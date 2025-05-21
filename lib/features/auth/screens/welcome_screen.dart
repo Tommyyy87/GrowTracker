@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../common/widgets/app_logo.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../widgets/auth_button.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -13,7 +13,7 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -58,11 +58,7 @@ class WelcomeScreen extends StatelessWidget {
                     AuthButton(
                       text: AppStrings.loginButton,
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
+                        context.goNamed('login');
                       },
                       isPrimary: false,
                     ),
@@ -70,18 +66,13 @@ class WelcomeScreen extends StatelessWidget {
                     AuthButton(
                       text: AppStrings.registerButton,
                       onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        );
+                        context.goNamed('register');
                       },
                     ),
                     const SizedBox(height: 32),
                     TextButton(
                       onPressed: () {
-                        // Zur Hauptseite navigieren, wenn der Benutzer überspringen möchte
-                        // TODO: Später implementieren
+                        context.goNamed('dashboard');
                       },
                       child: const Text(
                         AppStrings.skipButton,
