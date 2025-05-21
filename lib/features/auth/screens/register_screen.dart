@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
-import '../../../core/utils/validators.dart';
-import '../controllers/auth_controller.dart';
-import '../widgets/auth_button.dart';
-import '../widgets/auth_input_field.dart';
-import '../widgets/social_login_button.dart';
+import 'package:grow_tracker/core/constants/app_colors.dart';
+import 'package:grow_tracker/core/constants/app_strings.dart';
+import 'package:grow_tracker/core/utils/validators.dart';
+import 'package:grow_tracker/features/auth/controllers/auth_controller.dart';
+import 'package:grow_tracker/features/auth/widgets/auth_button.dart';
+import 'package:grow_tracker/features/auth/widgets/auth_input_field.dart';
+import 'package:grow_tracker/features/auth/widgets/social_login_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -109,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       extendBodyBehindAppBar: true,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,

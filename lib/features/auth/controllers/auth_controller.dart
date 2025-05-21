@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../data/repositories/auth_repository.dart';
+import 'package:grow_tracker/data/repositories/auth_repository.dart';
 
 class AuthController {
   final AuthRepository _authRepository = AuthRepository();

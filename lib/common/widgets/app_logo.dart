@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/assets_path.dart';
 
 class AppLogo extends StatelessWidget {
   final double size;
@@ -17,7 +16,10 @@ class AppLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+        color: Theme.of(context)
+            .colorScheme
+            .primary
+            .withAlpha(204), // 0.8 * 255 = 204
         shape: BoxShape.circle,
       ),
       child: Center(
