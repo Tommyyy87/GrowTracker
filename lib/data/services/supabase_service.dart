@@ -7,6 +7,7 @@ class SupabaseService {
       url: dotenv.env['SUPABASE_URL'] ?? '',
       anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
       authFlowType: AuthFlowType.pkce,
+      // Keine authOptions hier, da dieser Parameter in der aktuellen API nicht existiert
     );
   }
 
