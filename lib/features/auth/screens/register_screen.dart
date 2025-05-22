@@ -1,3 +1,4 @@
+// lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grow_tracker/core/constants/app_colors.dart';
@@ -65,9 +66,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _errorMessage = 'Ein Fehler ist aufgetreten: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -79,17 +82,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await _authController.signInWithGoogle();
-      if (mounted) {
-        context.goNamed('dashboard');
-      }
+      // Bei Erfolg erfolgt die Weiterleitung automatisch
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isGoogleLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
     }
   }
 
@@ -101,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () => context.goNamed('welcome'),
         ),
         title: const Text(AppStrings.registerTitle,
             style: TextStyle(color: Colors.white)),
@@ -181,8 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         padding: const EdgeInsets.all(8),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: Colors.red
-                              .withAlpha(26), // Ersetzt withOpacity(0.1)
+                          color: Colors.red.withAlpha(26),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.red.shade300),
                         ),

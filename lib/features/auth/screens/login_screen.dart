@@ -1,3 +1,4 @@
+// lib/features/auth/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grow_tracker/core/constants/app_colors.dart';
@@ -62,9 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = 'Ein Fehler ist aufgetreten: $e';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -77,17 +80,18 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _authController.signInWithGoogle();
       // Bei Erfolg erfolgt die Weiterleitung automatisch
-      if (mounted) {
-        context.goNamed('dashboard');
-      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Google-Anmeldung fehlgeschlagen: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isGoogleLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
     }
   }
 
@@ -99,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          onPressed: () => context.goNamed('welcome'),
         ),
         title: const Text('Willkommen zurück!',
             style: TextStyle(color: Colors.white)),
@@ -187,8 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(8),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: Colors.red
-                              .withAlpha(26), // Ersetzt withOpacity(0.1)
+                          color: Colors.red.withAlpha(26),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.red.shade300),
                         ),

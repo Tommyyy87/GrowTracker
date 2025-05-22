@@ -1,3 +1,4 @@
+// lib/features/auth/screens/welcome_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -57,28 +58,25 @@ class WelcomeScreen extends StatelessWidget {
                   children: [
                     AuthButton(
                       text: AppStrings.loginButton,
-                      onPressed: () {
-                        context.goNamed('login');
-                      },
+                      onPressed: () => context.goNamed('login'),
                       isPrimary: false,
                     ),
                     const SizedBox(height: 16),
                     AuthButton(
                       text: AppStrings.registerButton,
-                      onPressed: () {
-                        context.goNamed('register');
-                      },
+                      onPressed: () => context.goNamed('register'),
                     ),
                     const SizedBox(height: 32),
-                    TextButton(
-                      onPressed: () {
-                        context.goNamed('dashboard');
-                      },
-                      child: const Text(
-                        AppStrings.skipButton,
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    ),
+                    // Auskommentiert, um "Überspringen" zu entfernen, wie vom Benutzer gewünscht
+                    // TextButton(
+                    //   onPressed: () {
+                    //     context.goNamed('dashboard');
+                    //   },
+                    //   child: const Text(
+                    //     AppStrings.skipButton,
+                    //     style: TextStyle(color: Colors.white70),
+                    //   ),
+                    // ),
                     const SizedBox(height: 32),
                   ],
                 ),
