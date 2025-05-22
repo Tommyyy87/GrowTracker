@@ -26,29 +26,8 @@ class AuthButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: isLoading
-            ? const LoadingIndicator(color: Colors.white)
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(text),
-                ],
-              ),
-      );
-    } else {
-      return OutlinedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          side: BorderSide(color: theme.colorScheme.primary),
+          backgroundColor: Colors.white,
+          foregroundColor: theme.colorScheme.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -62,7 +41,45 @@ class AuthButton extends StatelessWidget {
                     Icon(icon),
                     const SizedBox(width: 8),
                   ],
-                  Text(text),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+      );
+    } else {
+      return OutlinedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Colors.white, width: 2),
+          backgroundColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: isLoading
+            ? const LoadingIndicator(color: Colors.white)
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, color: Colors.white),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
       );

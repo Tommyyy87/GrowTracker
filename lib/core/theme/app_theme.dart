@@ -10,8 +10,7 @@ class AppTheme {
         seedColor: AppColors.primaryColor,
         primary: AppColors.primaryColor,
         secondary: AppColors.accentColor,
-        surface:
-            AppColors.backgroundColor, // Geändert von 'background' zu 'surface'
+        surface: AppColors.backgroundColor,
         error: AppColors.errorColor,
       ),
       appBarTheme: const AppBarTheme(
@@ -23,6 +22,17 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryColor,
           foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+      // OutlinedButton Theme hinzugefügt für bessere Sichtbarkeit
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Colors.white, width: 2),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),

@@ -18,8 +18,28 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Auth-Status-Änderungen überwachen
+    SupabaseService.client.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+      if (session != null) {
+        debugPrint('User logged in: ${session.user.email}');
+      } else {
+        debugPrint('User logged out');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +47,7 @@ class MyApp extends StatelessWidget {
       title: 'GrowTracker',
       theme: AppTheme.lightTheme,
       routerConfig: AppRouter.router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/supabase_service.dart';
 
@@ -20,12 +21,31 @@ class AuthRepository {
     );
   }
 
-  // Google-Anmeldung
-  Future<void> signInWithGoogle() async {
-    await _supabase.auth.signInWithOAuth(
-      Provider.google,
-      redirectTo: 'io.supabase.growtracker://login-callback/',
-    );
+  // Google-Anmeldung - vereinfacht für Debug-Modus
+  Future<bool> signInWithGoogle() async {
+    try {
+      if (kIsWeb) {
+        // Web-Anmeldung
+        await _supabase.auth.signInWithOAuth(
+          Provider.google,
+          redirectTo: kDebugMode
+              ? 'http://localhost:3000/auth/callback'
+              : '${Uri.base.origin}/auth/callback',
+        );
+      } else {
+        // Mobile-Anmeldung (Debug und Release)
+        await _supabase.auth.signInWithOAuth(
+          Provider.google,
+          redirectTo: kDebugMode
+              ? 'http://localhost:3000/auth/callback' // Debug: Gleiche URL wie Web
+              : 'io.supabase.growtracker://login-callback/', // Release: Deep-Link
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Google Sign-In Fehler: $e');
+      return false;
+    }
   }
 
   // Passwort-Wiederherstellung
@@ -47,4 +67,7 @@ class AuthRepository {
         .from('profiles')
         .upsert({'id': userId, 'username': username});
   }
+
+  // Auth-Status-Stream für automatische Navigation
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 }

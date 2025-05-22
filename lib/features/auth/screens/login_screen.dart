@@ -78,8 +78,20 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await _authController.signInWithGoogle();
-      // Bei Erfolg erfolgt die Weiterleitung automatisch
+      final success = await _authController.signInWithGoogle();
+
+      if (success) {
+        if (mounted) {
+          // Kurz warten, damit die Authentifizierung verarbeitet wird
+          await Future.delayed(const Duration(milliseconds: 500));
+          context.goNamed('auth_callback');
+        }
+      } else {
+        setState(() {
+          _errorMessage =
+              'Google-Anmeldung fehlgeschlagen. Versuche es erneut.';
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {

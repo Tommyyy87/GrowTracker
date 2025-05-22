@@ -43,9 +43,21 @@ class AuthController {
     }
   }
 
-  // Google-Anmeldung
-  Future<void> signInWithGoogle() async {
-    await _authRepository.signInWithGoogle();
+  // Google-Anmeldung - mit verbesserter Fehlerbehandlung
+  Future<bool> signInWithGoogle() async {
+    try {
+      final success = await _authRepository.signInWithGoogle();
+      if (success) {
+        debugPrint('Google-Anmeldung erfolgreich');
+        return true;
+      } else {
+        debugPrint('Google-Anmeldung fehlgeschlagen');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Google Sign-In Controller Fehler: $e');
+      return false;
+    }
   }
 
   // Abmeldung
