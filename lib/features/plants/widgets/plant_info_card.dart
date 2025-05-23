@@ -73,6 +73,84 @@ class PlantInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // Ernteschätzung (prominent anzeigen wenn verfügbar)
+            if (plant.estimatedHarvestDate != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: plant.daysUntilHarvest != null &&
+                          plant.daysUntilHarvest! <= 7
+                      ? Colors.orange.shade50
+                      : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: plant.daysUntilHarvest != null &&
+                            plant.daysUntilHarvest! <= 7
+                        ? Colors.orange.shade200
+                        : Colors.green.shade200,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      plant.daysUntilHarvest != null &&
+                              plant.daysUntilHarvest! <= 7
+                          ? Icons.warning_rounded
+                          : Icons.agriculture_rounded,
+                      color: plant.daysUntilHarvest != null &&
+                              plant.daysUntilHarvest! <= 7
+                          ? Colors.orange.shade600
+                          : Colors.green.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ernteschätzung',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: plant.daysUntilHarvest != null &&
+                                      plant.daysUntilHarvest! <= 7
+                                  ? Colors.orange.shade700
+                                  : Colors.green.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            plant.harvestEstimateText,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: plant.daysUntilHarvest != null &&
+                                      plant.daysUntilHarvest! <= 7
+                                  ? Colors.orange.shade800
+                                  : Colors.green.shade800,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (plant.estimatedHarvestDate != null)
+                            Text(
+                              'ca. ${_formatDate(plant.estimatedHarvestDate!)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: plant.daysUntilHarvest != null &&
+                                        plant.daysUntilHarvest! <= 7
+                                    ? Colors.orange.shade600
+                                    : Colors.green.shade600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Info Grid
             Column(
               children: [
@@ -95,8 +173,8 @@ class PlantInfoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
-                  'Aussaatdatum',
-                  _formatDate(plant.plantedDate),
+                  plant.primaryDateLabel,
+                  _formatDate(plant.primaryDate),
                   Icons.calendar_today_rounded,
                 ),
                 const SizedBox(height: 12),
@@ -111,6 +189,34 @@ class PlantInfoCard extends StatelessWidget {
                   plant.location.displayName,
                   Icons.location_on_rounded,
                 ),
+
+                // Zusätzliche Datumsangaben falls vorhanden
+                if (plant.seedDate != null &&
+                    plant.primaryDate != plant.seedDate) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    'Aussaat',
+                    _formatDate(plant.seedDate!),
+                    Icons.eco_rounded,
+                  ),
+                ],
+                if (plant.germinationDate != null &&
+                    plant.primaryDate != plant.germinationDate) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    'Keimung',
+                    _formatDate(plant.germinationDate!),
+                    Icons.local_florist_rounded,
+                  ),
+                ],
+                if (plant.documentationStartDate != plant.primaryDate) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    'Dokumentation',
+                    _formatDate(plant.documentationStartDate),
+                    Icons.description_rounded,
+                  ),
+                ],
               ],
             ),
 

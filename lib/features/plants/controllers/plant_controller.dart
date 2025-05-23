@@ -46,15 +46,19 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
     }
   }
 
-  // Neue Pflanze erstellen
+  // Neue Pflanze erstellen - erweiterte Parameter
   Future<Plant?> createPlant({
     required String name,
     required PlantType plantType,
     required String strain,
     String? breeder,
-    required DateTime plantedDate,
+    DateTime? seedDate,
+    DateTime? germinationDate,
+    required DateTime documentationStartDate,
     required PlantMedium medium,
     required PlantLocation location,
+    PlantStatus initialStatus = PlantStatus.seeded,
+    int? estimatedHarvestDays,
     String? notes,
     String? photoPath,
   }) async {
@@ -76,9 +80,13 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         plantType: plantType,
         strain: strain,
         breeder: breeder,
-        plantedDate: plantedDate,
+        seedDate: seedDate,
+        germinationDate: germinationDate,
+        documentationStartDate: documentationStartDate,
         medium: medium,
         location: location,
+        status: initialStatus,
+        estimatedHarvestDays: estimatedHarvestDays,
         notes: notes,
         photoUrl: photoUrl,
         userId: userId,
@@ -118,6 +126,20 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       return await updatePlant(updatedPlant);
     } catch (e) {
       debugPrint('Error updating plant status: $e');
+      return false;
+    }
+  }
+
+  // Ernteschätzung aktualisieren
+  Future<bool> updateHarvestEstimate(String plantId, int? estimatedDays) async {
+    try {
+      final plant = await _repository.getPlantById(plantId);
+      if (plant == null) return false;
+
+      final updatedPlant = plant.copyWith(estimatedHarvestDays: estimatedDays);
+      return await updatePlant(updatedPlant);
+    } catch (e) {
+      debugPrint('Error updating harvest estimate: $e');
       return false;
     }
   }
@@ -219,10 +241,30 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
             ? plants.map((p) => p.ageInDays).reduce((a, b) => a + b) /
                 plants.length
             : 0,
+        'harvestReady': plants
+            .where((p) =>
+                p.daysUntilHarvest != null &&
+                p.daysUntilHarvest! <= 7 &&
+                p.daysUntilHarvest! >= 0)
+            .length,
       };
     } catch (e) {
       debugPrint('Error getting plant stats: $e');
       return {};
+    }
+  }
+
+  // Pflanzen kurz vor der Ernte
+  Future<List<Plant>> getPlantsNearHarvest({int daysThreshold = 7}) async {
+    try {
+      final plants = await _repository.getAllPlants();
+      return plants.where((plant) {
+        final daysLeft = plant.daysUntilHarvest;
+        return daysLeft != null && daysLeft >= 0 && daysLeft <= daysThreshold;
+      }).toList();
+    } catch (e) {
+      debugPrint('Error getting plants near harvest: $e');
+      return [];
     }
   }
 }
@@ -245,4 +287,10 @@ final plantHarvestsProvider =
 final plantStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantStats();
+});
+
+// Plants Near Harvest Provider
+final plantsNearHarvestProvider = FutureProvider<List<Plant>>((ref) async {
+  final controller = ref.read(plantControllerProvider.notifier);
+  return controller.getPlantsNearHarvest();
 });

@@ -117,6 +117,77 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
             ),
             const SizedBox(height: 24),
 
+            // Aktueller Status
+            Text(
+              'Aktueller Status *',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'In welchem Stadium befindet sich deine Pflanze gerade?',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              children: PlantStatus.values.map((status) {
+                final isSelected = data.initialStatus == status;
+                return InkWell(
+                  onTap: () {
+                    ref
+                        .read(addPlantDataProvider.notifier)
+                        .update((state) => state..initialStatus = status);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary.withAlpha(51)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          status.displayName,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.black87,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
             // Sorte/Genetik
             TextField(
               controller: _strainController,
@@ -167,7 +238,7 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tipp',
+                          'Tipp zum Status',
                           style: TextStyle(
                             color: Colors.blue.shade700,
                             fontWeight: FontWeight.w600,
@@ -175,7 +246,7 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Wähle einen eindeutigen Namen, damit du deine Pflanzen später leicht unterscheiden kannst.',
+                          'Wähle den aktuellen Status deiner Pflanze. Dies bestimmt, welche Datumsfelder im nächsten Schritt angezeigt werden.',
                           style: TextStyle(
                             color: Colors.blue.shade600,
                             fontSize: 14,

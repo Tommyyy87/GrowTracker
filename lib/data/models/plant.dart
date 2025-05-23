@@ -55,10 +55,14 @@ class Plant {
   final PlantType plantType;
   final String strain;
   final String? breeder;
-  final DateTime plantedDate;
+  final DateTime? seedDate; // Aussaatdatum (kann unbekannt sein)
+  final DateTime? germinationDate; // Keimungsdatum (kann unbekannt sein)
+  final DateTime
+      documentationStartDate; // Start der Dokumentation (immer gesetzt)
   final PlantMedium medium;
   final PlantLocation location;
   final PlantStatus status;
+  final int? estimatedHarvestDays; // Geschätzte Tage bis Ernte
   final String? notes;
   final String? photoUrl;
   final String qrCode;
@@ -73,10 +77,13 @@ class Plant {
     required this.plantType,
     required this.strain,
     this.breeder,
-    required this.plantedDate,
+    this.seedDate,
+    this.germinationDate,
+    required this.documentationStartDate,
     required this.medium,
     required this.location,
     this.status = PlantStatus.seeded,
+    this.estimatedHarvestDays,
     this.notes,
     this.photoUrl,
     required this.qrCode,
@@ -91,9 +98,13 @@ class Plant {
     required PlantType plantType,
     required String strain,
     String? breeder,
-    required DateTime plantedDate,
+    DateTime? seedDate,
+    DateTime? germinationDate,
+    required DateTime documentationStartDate,
     required PlantMedium medium,
     required PlantLocation location,
+    PlantStatus status = PlantStatus.seeded,
+    int? estimatedHarvestDays,
     String? notes,
     String? photoUrl,
     required String userId,
@@ -113,9 +124,13 @@ class Plant {
       plantType: plantType,
       strain: strain,
       breeder: breeder,
-      plantedDate: plantedDate,
+      seedDate: seedDate,
+      germinationDate: germinationDate,
+      documentationStartDate: documentationStartDate,
       medium: medium,
       location: location,
+      status: status,
+      estimatedHarvestDays: estimatedHarvestDays,
       notes: notes,
       photoUrl: photoUrl,
       qrCode: displayId, // QR Code enthält die Display-ID
@@ -131,10 +146,13 @@ class Plant {
     PlantType? plantType,
     String? strain,
     String? breeder,
-    DateTime? plantedDate,
+    DateTime? seedDate,
+    DateTime? germinationDate,
+    DateTime? documentationStartDate,
     PlantMedium? medium,
     PlantLocation? location,
     PlantStatus? status,
+    int? estimatedHarvestDays,
     String? notes,
     String? photoUrl,
   }) {
@@ -145,10 +163,14 @@ class Plant {
       plantType: plantType ?? this.plantType,
       strain: strain ?? this.strain,
       breeder: breeder ?? this.breeder,
-      plantedDate: plantedDate ?? this.plantedDate,
+      seedDate: seedDate ?? this.seedDate,
+      germinationDate: germinationDate ?? this.germinationDate,
+      documentationStartDate:
+          documentationStartDate ?? this.documentationStartDate,
       medium: medium ?? this.medium,
       location: location ?? this.location,
       status: status ?? this.status,
+      estimatedHarvestDays: estimatedHarvestDays ?? this.estimatedHarvestDays,
       notes: notes ?? this.notes,
       photoUrl: photoUrl ?? this.photoUrl,
       qrCode: qrCode,
@@ -167,10 +189,13 @@ class Plant {
       'plant_type': plantType.name,
       'strain': strain,
       'breeder': breeder,
-      'planted_date': plantedDate.toIso8601String(),
+      'seed_date': seedDate?.toIso8601String(),
+      'germination_date': germinationDate?.toIso8601String(),
+      'documentation_start_date': documentationStartDate.toIso8601String(),
       'medium': medium.name,
       'location': location.name,
       'status': status.name,
+      'estimated_harvest_days': estimatedHarvestDays,
       'notes': notes,
       'photo_url': photoUrl,
       'qr_code': qrCode,
@@ -192,7 +217,14 @@ class Plant {
       ),
       strain: json['strain'] as String,
       breeder: json['breeder'] as String?,
-      plantedDate: DateTime.parse(json['planted_date'] as String),
+      seedDate: json['seed_date'] != null
+          ? DateTime.parse(json['seed_date'] as String)
+          : null,
+      germinationDate: json['germination_date'] != null
+          ? DateTime.parse(json['germination_date'] as String)
+          : null,
+      documentationStartDate:
+          DateTime.parse(json['documentation_start_date'] as String),
       medium: PlantMedium.values.firstWhere(
         (e) => e.name == json['medium'],
         orElse: () => PlantMedium.soil,
@@ -205,6 +237,7 @@ class Plant {
         (e) => e.name == json['status'],
         orElse: () => PlantStatus.seeded,
       ),
+      estimatedHarvestDays: json['estimated_harvest_days'] as int?,
       notes: json['notes'] as String?,
       photoUrl: json['photo_url'] as String?,
       qrCode: json['qr_code'] as String,
@@ -214,9 +247,48 @@ class Plant {
     );
   }
 
-  // Getter für Alter der Pflanze
+  // Getter für Alter der Pflanze (basierend auf dem ersten bekannten Datum)
   int get ageInDays {
-    return DateTime.now().difference(plantedDate).inDays;
+    final referenceDate = seedDate ?? germinationDate ?? documentationStartDate;
+    return DateTime.now().difference(referenceDate).inDays;
+  }
+
+  // Getter für geschätztes Erntedatum
+  DateTime? get estimatedHarvestDate {
+    if (estimatedHarvestDays == null) return null;
+
+    // Basis für Berechnung: Das erste bekannte Datum
+    final baseDate = seedDate ?? germinationDate ?? documentationStartDate;
+    return baseDate.add(Duration(days: estimatedHarvestDays!));
+  }
+
+  // Getter für verbleibende Tage bis zur geschätzten Ernte
+  int? get daysUntilHarvest {
+    final harvestDate = estimatedHarvestDate;
+    if (harvestDate == null) return null;
+
+    final now = DateTime.now();
+    final difference = harvestDate.difference(now).inDays;
+    return difference > 0 ? difference : 0; // Negative Werte auf 0 setzen
+  }
+
+  // Getter für formatierte Ernteschätzung
+  String get harvestEstimateText {
+    final harvestDate = estimatedHarvestDate;
+    final daysLeft = daysUntilHarvest;
+
+    if (harvestDate == null || daysLeft == null) {
+      return 'Keine Schätzung verfügbar';
+    }
+
+    if (daysLeft == 0) {
+      return 'Erntereif!';
+    } else if (daysLeft <= 7) {
+      return 'Ernte in $daysLeft Tagen';
+    } else {
+      final weeks = (daysLeft / 7).round();
+      return 'Ernte in ca. $weeks Wochen';
+    }
   }
 
   // Getter für Status-Farbe
@@ -239,5 +311,17 @@ class Plant {
       case PlantStatus.completed:
         return '#607D8B'; // Grau
     }
+  }
+
+  // Getter für das relevante Alter-Datum (für Anzeige)
+  DateTime get primaryDate {
+    return seedDate ?? germinationDate ?? documentationStartDate;
+  }
+
+  // Getter für formatierten Datums-Text
+  String get primaryDateLabel {
+    if (seedDate != null) return 'Aussaat';
+    if (germinationDate != null) return 'Keimung';
+    return 'Dokumentation';
   }
 }

@@ -14,21 +14,33 @@ import 'steps/confirmation_step.dart';
 class AddPlantData {
   String? name;
   PlantType? plantType;
+  PlantStatus? initialStatus;
   String? strain;
   String? breeder;
-  DateTime? plantedDate;
+  DateTime? seedDate;
+  DateTime? germinationDate;
+  DateTime? documentationStartDate;
   PlantMedium? medium;
   PlantLocation? location;
+  int? estimatedHarvestDays;
   String? notes;
   String? photoPath;
 
   bool get isBasicInfoComplete =>
-      name != null && plantType != null && strain != null && strain!.isNotEmpty;
+      name != null &&
+      plantType != null &&
+      strain != null &&
+      strain!.isNotEmpty &&
+      initialStatus != null;
 
   bool get isCultivationComplete =>
-      plantedDate != null && medium != null && location != null;
+      documentationStartDate != null && medium != null && location != null;
 
   bool get isReadyToCreate => isBasicInfoComplete && isCultivationComplete;
+
+  // Getter für das effektive Startdatum der Dokumentation
+  DateTime get effectiveDocumentationDate =>
+      documentationStartDate ?? DateTime.now();
 }
 
 final addPlantDataProvider =
@@ -92,9 +104,13 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         plantType: data.plantType!,
         strain: data.strain!,
         breeder: data.breeder,
-        plantedDate: data.plantedDate!,
+        seedDate: data.seedDate,
+        germinationDate: data.germinationDate,
+        documentationStartDate: data.effectiveDocumentationDate,
         medium: data.medium!,
         location: data.location!,
+        initialStatus: data.initialStatus!,
+        estimatedHarvestDays: data.estimatedHarvestDays,
         notes: data.notes,
         photoPath: data.photoPath,
       );
@@ -107,6 +123,9 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             backgroundColor: AppColors.successColor,
           ),
         );
+
+        // Daten zurücksetzen
+        ref.read(addPlantDataProvider.notifier).state = AddPlantData();
 
         // Zurück zum Dashboard
         context.goNamed('dashboard');
@@ -157,7 +176,11 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.goNamed('dashboard'),
+          onPressed: () {
+            // Daten zurücksetzen beim Schließen
+            ref.read(addPlantDataProvider.notifier).state = AddPlantData();
+            context.goNamed('dashboard');
+          },
         ),
       ),
       body: Column(

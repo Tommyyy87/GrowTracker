@@ -9,8 +9,18 @@ class ConfirmationStep extends ConsumerWidget {
   const ConfirmationStep({super.key});
 
   String _formatDate(DateTime? date) {
-    if (date == null) return '--';
+    if (date == null) return 'Unbekannt';
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+
+  String _formatHarvestEstimate(int? days, DateTime? baseDate) {
+    if (days == null || baseDate == null) return 'Keine Schätzung';
+
+    final harvestDate = baseDate.add(Duration(days: days));
+    final weeksFloat = days / 7;
+    final weeks = weeksFloat.round();
+
+    return '$days Tage (ca. $weeks Wochen) → ${_formatDate(harvestDate)}';
   }
 
   @override
@@ -94,6 +104,30 @@ class ConfirmationStep extends ConsumerWidget {
                                   fontSize: 16,
                                 ),
                               ),
+                              // Status-Chip
+                              if (data.initialStatus != null) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withAlpha(51),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    data.initialStatus!.displayName,
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -115,13 +149,51 @@ class ConfirmationStep extends ConsumerWidget {
                         Icons.business_rounded,
                       ),
                     ],
+
+                    const SizedBox(height: 16),
+                    const Divider(),
                     const SizedBox(height: 12),
-                    _buildDetailRow(
-                      'Aussaatdatum',
-                      _formatDate(data.plantedDate),
-                      Icons.calendar_today_rounded,
+
+                    // Datumsangaben
+                    Text(
+                      'Wichtige Daten',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                        fontSize: 14,
+                      ),
                     ),
+                    const SizedBox(height: 8),
+
+                    if (data.seedDate != null) ...[
+                      _buildDetailRow(
+                        'Aussaatdatum',
+                        _formatDate(data.seedDate),
+                        Icons.eco_rounded,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    if (data.germinationDate != null) ...[
+                      _buildDetailRow(
+                        'Keimungsdatum',
+                        _formatDate(data.germinationDate),
+                        Icons.local_florist_rounded,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    _buildDetailRow(
+                      'Start der Dokumentation',
+                      _formatDate(data.documentationStartDate),
+                      Icons.description_rounded,
+                    ),
+
+                    const SizedBox(height: 16),
+                    const Divider(),
                     const SizedBox(height: 12),
+
+                    // Anbau-Details
                     _buildDetailRow(
                       'Medium',
                       data.medium?.displayName ?? '--',
@@ -134,6 +206,21 @@ class ConfirmationStep extends ConsumerWidget {
                       Icons.location_on_rounded,
                     ),
 
+                    // Ernteschätzung
+                    if (data.estimatedHarvestDays != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        'Ernteschätzung',
+                        _formatHarvestEstimate(
+                            data.estimatedHarvestDays,
+                            data.seedDate ??
+                                data.germinationDate ??
+                                data.documentationStartDate),
+                        Icons.agriculture_rounded,
+                      ),
+                    ],
+
+                    // Notizen
                     if (data.notes != null) ...[
                       const SizedBox(height: 16),
                       const Divider(),
@@ -177,55 +264,57 @@ class ConfirmationStep extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
 
-            // Status-Info
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.shade200),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(8),
+            // Ernteschätzung-Info
+            if (data.estimatedHarvestDays != null) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.agriculture_rounded,
+                        color: Colors.green.shade600,
+                        size: 24,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.eco_rounded,
-                      color: Colors.green.shade600,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Startstatus: Aussaat',
-                          style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ernteschätzung aktiviert',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Deine Pflanze wird mit dem Status "Aussaat" erstellt. Du kannst den Status später jederzeit ändern.',
-                          style: TextStyle(
-                            color: Colors.green.shade600,
-                            fontSize: 14,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Du erhältst eine Benachrichtigung, wenn die geschätzte Erntezeit näher rückt.',
+                            style: TextStyle(
+                              color: Colors.green.shade600,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // QR-Code Info
             Container(
