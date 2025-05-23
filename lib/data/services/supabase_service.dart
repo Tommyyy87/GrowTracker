@@ -16,7 +16,6 @@ class SupabaseService {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
-        authFlowType: AuthFlowType.pkce,
         debug: kDebugMode,
       );
 

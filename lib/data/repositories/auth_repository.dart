@@ -27,7 +27,7 @@ class AuthRepository {
       if (kIsWeb) {
         // Web-Anmeldung
         await _supabase.auth.signInWithOAuth(
-          Provider.google,
+          OAuthProvider.google,
           redirectTo: kDebugMode
               ? 'http://localhost:3000/auth/callback'
               : '${Uri.base.origin}/auth/callback',
@@ -35,7 +35,7 @@ class AuthRepository {
       } else {
         // Mobile-Anmeldung (Debug und Release)
         await _supabase.auth.signInWithOAuth(
-          Provider.google,
+          OAuthProvider.google,
           redirectTo: kDebugMode
               ? 'http://localhost:3000/auth/callback' // Debug: Gleiche URL wie Web
               : 'io.supabase.growtracker://login-callback/', // Release: Deep-Link

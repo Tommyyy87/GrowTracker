@@ -82,9 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (mounted) {
-          // Kurz warten, damit die Authentifizierung verarbeitet wird
-          await Future.delayed(const Duration(milliseconds: 500));
-          context.goNamed('auth_callback');
+          // Die Navigation erfolgt automatisch über den AuthStateChange-Listener
+          // Kein manuelles Navigieren nötig
+          debugPrint(
+              'Google-Anmeldung erfolgreich - warte auf AuthState-Änderung');
         }
       } else {
         setState(() {
