@@ -19,28 +19,45 @@ class AddPlantData {
   String? breeder;
   DateTime? seedDate;
   DateTime? germinationDate;
-  DateTime? documentationStartDate;
+  DateTime? plantedDate; // Umbenannt von documentationStartDate
   PlantMedium? medium;
   PlantLocation? location;
   int? estimatedHarvestDays;
   String? notes;
   String? photoPath;
 
+  AddPlantData({
+    this.name,
+    this.plantType,
+    this.initialStatus,
+    this.strain,
+    this.breeder,
+    this.seedDate,
+    this.germinationDate,
+    this.plantedDate, // Umbenannt
+    this.medium,
+    this.location,
+    this.estimatedHarvestDays,
+    this.notes,
+    this.photoPath,
+  });
+
   bool get isBasicInfoComplete =>
       name != null &&
+      name!.isNotEmpty &&
       plantType != null &&
       strain != null &&
       strain!.isNotEmpty &&
       initialStatus != null;
 
+  // Prüft jetzt auf plantedDate
   bool get isCultivationComplete =>
-      documentationStartDate != null && medium != null && location != null;
+      plantedDate != null && medium != null && location != null;
 
   bool get isReadyToCreate => isBasicInfoComplete && isCultivationComplete;
 
-  // Getter für das effektive Startdatum der Dokumentation
-  DateTime get effectiveDocumentationDate =>
-      documentationStartDate ?? DateTime.now();
+  // Gibt plantedDate zurück oder das aktuelle Datum als Fallback
+  DateTime get effectivePlantedDate => plantedDate ?? DateTime.now();
 }
 
 final addPlantDataProvider =
@@ -93,7 +110,16 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   Future<void> _createPlant() async {
     final data = ref.read(addPlantDataProvider);
-    if (!data.isReadyToCreate) return;
+    if (!data.isReadyToCreate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Bitte fülle alle Pflichtfelder aus. Basic: ${data.isBasicInfoComplete}, Cult: ${data.isCultivationComplete}'),
+          backgroundColor: AppColors.errorColor,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isCreating = true);
 
@@ -106,7 +132,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         breeder: data.breeder,
         seedDate: data.seedDate,
         germinationDate: data.germinationDate,
-        documentationStartDate: data.effectiveDocumentationDate,
+        plantedDate:
+            data.effectivePlantedDate, // Verwendet effectivePlantedDate
         medium: data.medium!,
         location: data.location!,
         initialStatus: data.initialStatus!,
@@ -116,29 +143,35 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
       );
 
       if (plant != null && mounted) {
-        // Erfolgsmeldung anzeigen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${plant.name} wurde erfolgreich erstellt!'),
             backgroundColor: AppColors.successColor,
           ),
         );
-
-        // Daten zurücksetzen
         ref.read(addPlantDataProvider.notifier).state = AddPlantData();
-
-        // Zurück zum Dashboard
         context.goNamed('dashboard');
       } else {
-        throw Exception('Pflanze konnte nicht erstellt werden');
+        // Der Fehler wird jetzt detaillierter vom Controller erwartet oder hier als generischer Fehler behandelt
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Pflanze konnte nicht erstellt werden. Überprüfe die Debug-Konsole für Details.'),
+              backgroundColor: AppColors.errorColor,
+            ),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Fehler beim Erstellen der Pflanze: $e'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fehler beim Erstellen der Pflanze: ${e.toString()}'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isCreating = false);
@@ -165,6 +198,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -177,7 +212,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
-            // Daten zurücksetzen beim Schließen
             ref.read(addPlantDataProvider.notifier).state = AddPlantData();
             context.goNamed('dashboard');
           },
@@ -185,14 +219,13 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
       ),
       body: Column(
         children: [
-          // Progress Indicator
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(51), // 0.2 * 255 = 51
+                  color: Colors.grey.withAlpha(51),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -217,8 +250,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
               ],
             ),
           ),
-
-          // Step Content
           Expanded(
             child: PageView(
               controller: _pageController,
@@ -231,15 +262,13 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
               ],
             ),
           ),
-
-          // Navigation Buttons
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(51), // 0.2 * 255 = 51
+                  color: Colors.grey.withAlpha(51),
                   blurRadius: 4,
                   offset: const Offset(0, -2),
                 ),
@@ -254,6 +283,7 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         side: BorderSide(color: Colors.grey.shade300),
+                        foregroundColor: theme.colorScheme.primary,
                       ),
                       child: const Text('Zurück'),
                     ),

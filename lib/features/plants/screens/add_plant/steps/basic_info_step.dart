@@ -35,16 +35,29 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
   }
 
   void _updateData() {
-    ref.read(addPlantDataProvider.notifier).update((state) => state
-      ..name = _nameController.text.trim().isEmpty
-          ? null
-          : _nameController.text.trim()
-      ..strain = _strainController.text.trim().isEmpty
-          ? null
-          : _strainController.text.trim()
-      ..breeder = _breederController.text.trim().isEmpty
-          ? null
-          : _breederController.text.trim());
+    ref.read(addPlantDataProvider.notifier).update((currentData) {
+      return AddPlantData(
+        name: _nameController.text.trim().isEmpty
+            ? null
+            : _nameController.text.trim(),
+        strain: _strainController.text.trim().isEmpty
+            ? null
+            : _strainController.text.trim(),
+        breeder: _breederController.text.trim().isEmpty
+            ? null
+            : _breederController.text.trim(),
+        plantType: currentData.plantType,
+        initialStatus: currentData.initialStatus,
+        seedDate: currentData.seedDate,
+        germinationDate: currentData.germinationDate,
+        plantedDate: currentData.plantedDate, // Korrigiert
+        medium: currentData.medium,
+        location: currentData.location,
+        estimatedHarvestDays: currentData.estimatedHarvestDays,
+        notes: currentData.notes,
+        photoPath: currentData.photoPath,
+      );
+    });
   }
 
   @override
@@ -58,8 +71,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-
-            // Beschreibung
             Text(
               'Gib die grundlegenden Informationen zu deiner Pflanze ein.',
               style: TextStyle(
@@ -68,8 +79,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               ),
             ),
             const SizedBox(height: 32),
-
-            // Name
             TextField(
               controller: _nameController,
               onChanged: (_) => _updateData(),
@@ -83,8 +92,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Pflanzentyp
             Text(
               'Pflanzenart *',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -101,13 +108,28 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
                   label: Text(type.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
-                    ref.read(addPlantDataProvider.notifier).update(
-                        (state) => state..plantType = selected ? type : null);
+                    ref.read(addPlantDataProvider.notifier).update((currentData) {
+                      return AddPlantData(
+                        plantType: selected ? type : null,
+                        name: currentData.name,
+                        initialStatus: currentData.initialStatus,
+                        strain: currentData.strain,
+                        breeder: currentData.breeder,
+                        seedDate: currentData.seedDate,
+                        germinationDate: currentData.germinationDate,
+                        plantedDate: currentData.plantedDate, // Korrigiert
+                        medium: currentData.medium,
+                        location: currentData.location,
+                        estimatedHarvestDays: currentData.estimatedHarvestDays,
+                        notes: currentData.notes,
+                        photoPath: currentData.photoPath,
+                      );
+                    });
                   },
                   selectedColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withAlpha(51), // 0.2 * 255 = 51
+                      .withAlpha(51), 
                   backgroundColor: Colors.grey.shade100,
                   side: isSelected
                       ? BorderSide(color: Theme.of(context).colorScheme.primary)
@@ -116,8 +138,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-
-            // Aktueller Status
             Text(
               'Aktueller Status *',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -144,9 +164,23 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
                 final isSelected = data.initialStatus == status;
                 return InkWell(
                   onTap: () {
-                    ref
-                        .read(addPlantDataProvider.notifier)
-                        .update((state) => state..initialStatus = status);
+                    ref.read(addPlantDataProvider.notifier).update((currentData) {
+                      return AddPlantData(
+                        initialStatus: status,
+                        name: currentData.name,
+                        plantType: currentData.plantType,
+                        strain: currentData.strain,
+                        breeder: currentData.breeder,
+                        seedDate: currentData.seedDate,
+                        germinationDate: currentData.germinationDate,
+                        plantedDate: currentData.plantedDate, // Korrigiert
+                        medium: currentData.medium,
+                        location: currentData.location,
+                        estimatedHarvestDays: currentData.estimatedHarvestDays,
+                        notes: currentData.notes,
+                        photoPath: currentData.photoPath,
+                      );
+                    });
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
@@ -187,8 +221,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-
-            // Sorte/Genetik
             TextField(
               controller: _strainController,
               onChanged: (_) => _updateData(),
@@ -202,8 +234,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Hersteller (optional)
             TextField(
               controller: _breederController,
               onChanged: (_) => _updateData(),
@@ -217,8 +247,6 @@ class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
               ),
             ),
             const SizedBox(height: 32),
-
-            // Hinweis
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

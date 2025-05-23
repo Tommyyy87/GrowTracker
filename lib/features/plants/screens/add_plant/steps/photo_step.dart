@@ -13,6 +13,7 @@ class PhotoStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(addPlantDataProvider);
     final controller = ref.read(plantControllerProvider.notifier);
+    final theme = Theme.of(context);
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -46,32 +47,33 @@ class PhotoStep extends ConsumerWidget {
                     style: BorderStyle.solid,
                   ),
                 ),
-                child: data.photoPath != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.file(
-                          File(data.photoPath!),
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.image_outlined,
-                            size: 48,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Kein Foto ausgewählt',
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 16,
+                child:
+                    data.photoPath != null && File(data.photoPath!).existsSync()
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.file(
+                              File(data.photoPath!),
+                              fit: BoxFit.cover,
                             ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image_outlined,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Kein Foto ausgewählt',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
               ),
             ),
             const SizedBox(height: 32),
@@ -86,14 +88,32 @@ class PhotoStep extends ConsumerWidget {
                       if (photoPath != null) {
                         ref
                             .read(addPlantDataProvider.notifier)
-                            .update((state) => state..photoPath = photoPath);
+                            .update((currentData) => AddPlantData(
+                                  photoPath: photoPath,
+                                  name: currentData.name,
+                                  plantType: currentData.plantType,
+                                  initialStatus: currentData.initialStatus,
+                                  strain: currentData.strain,
+                                  breeder: currentData.breeder,
+                                  seedDate: currentData.seedDate,
+                                  germinationDate: currentData.germinationDate,
+                                  plantedDate: currentData.plantedDate,
+                                  medium: currentData.medium,
+                                  location: currentData.location,
+                                  estimatedHarvestDays:
+                                      currentData.estimatedHarvestDays,
+                                  notes: currentData.notes,
+                                ));
                       }
                     },
-                    icon: const Icon(Icons.camera_alt_rounded),
-                    label: const Text('Kamera'),
+                    icon: Icon(Icons.camera_alt_rounded,
+                        color: theme.colorScheme.primary),
+                    label: Text('Kamera',
+                        style: TextStyle(color: theme.colorScheme.primary)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey.shade300),
+                      // foregroundColor: theme.colorScheme.primary, // Alternative globale Zuweisung
                     ),
                   ),
                 ),
@@ -105,14 +125,32 @@ class PhotoStep extends ConsumerWidget {
                       if (photoPath != null) {
                         ref
                             .read(addPlantDataProvider.notifier)
-                            .update((state) => state..photoPath = photoPath);
+                            .update((currentData) => AddPlantData(
+                                  photoPath: photoPath,
+                                  name: currentData.name,
+                                  plantType: currentData.plantType,
+                                  initialStatus: currentData.initialStatus,
+                                  strain: currentData.strain,
+                                  breeder: currentData.breeder,
+                                  seedDate: currentData.seedDate,
+                                  germinationDate: currentData.germinationDate,
+                                  plantedDate: currentData.plantedDate,
+                                  medium: currentData.medium,
+                                  location: currentData.location,
+                                  estimatedHarvestDays:
+                                      currentData.estimatedHarvestDays,
+                                  notes: currentData.notes,
+                                ));
                       }
                     },
-                    icon: const Icon(Icons.photo_library_rounded),
-                    label: const Text('Galerie'),
+                    icon: Icon(Icons.photo_library_rounded,
+                        color: theme.colorScheme.primary),
+                    label: Text('Galerie',
+                        style: TextStyle(color: theme.colorScheme.primary)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey.shade300),
+                      // foregroundColor: theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -126,7 +164,22 @@ class PhotoStep extends ConsumerWidget {
                   onPressed: () {
                     ref
                         .read(addPlantDataProvider.notifier)
-                        .update((state) => state..photoPath = null);
+                        .update((currentData) => AddPlantData(
+                              photoPath: null, // Foto entfernen
+                              name: currentData.name,
+                              plantType: currentData.plantType,
+                              initialStatus: currentData.initialStatus,
+                              strain: currentData.strain,
+                              breeder: currentData.breeder,
+                              seedDate: currentData.seedDate,
+                              germinationDate: currentData.germinationDate,
+                              plantedDate: currentData.plantedDate,
+                              medium: currentData.medium,
+                              location: currentData.location,
+                              estimatedHarvestDays:
+                                  currentData.estimatedHarvestDays,
+                              notes: currentData.notes,
+                            ));
                   },
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('Foto entfernen'),

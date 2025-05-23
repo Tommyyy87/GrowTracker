@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../add_plant_wizard.dart';
+// import '../../../../../data/models/plant.dart'; // Entfernt, da PlantStatus etc. über AddPlantData verfügbar sein sollten
 
 class ConfirmationStep extends ConsumerWidget {
   const ConfirmationStep({super.key});
@@ -27,6 +28,15 @@ class ConfirmationStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(addPlantDataProvider);
 
+    DateTime? harvestBaseDate;
+    if (data.seedDate != null) {
+      harvestBaseDate = data.seedDate;
+    } else if (data.germinationDate != null) {
+      harvestBaseDate = data.germinationDate;
+    } else if (data.plantedDate != null) {
+      harvestBaseDate = data.plantedDate;
+    }
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: SingleChildScrollView(
@@ -34,8 +44,6 @@ class ConfirmationStep extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-
-            // Beschreibung
             Text(
               'Überprüfe deine Angaben und erstelle deine Pflanze.',
               style: TextStyle(
@@ -44,8 +52,6 @@ class ConfirmationStep extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 32),
-
-            // Vorschau-Karte
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -56,10 +62,8 @@ class ConfirmationStep extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header mit Foto
                     Row(
                       children: [
-                        // Foto-Vorschau
                         Container(
                           width: 80,
                           height: 80,
@@ -67,7 +71,8 @@ class ConfirmationStep extends ConsumerWidget {
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: data.photoPath != null
+                          child: data.photoPath != null &&
+                                  File(data.photoPath!).existsSync()
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
                                   child: Image.file(
@@ -82,8 +87,6 @@ class ConfirmationStep extends ConsumerWidget {
                                 ),
                         ),
                         const SizedBox(width: 16),
-
-                        // Name und Typ
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +107,6 @@ class ConfirmationStep extends ConsumerWidget {
                                   fontSize: 16,
                                 ),
                               ),
-                              // Status-Chip
                               if (data.initialStatus != null) ...[
                                 const SizedBox(height: 4),
                                 Container(
@@ -134,14 +136,12 @@ class ConfirmationStep extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
-
-                    // Details-Grid
                     _buildDetailRow(
                       'Sorte/Genetik',
                       data.strain ?? '--',
                       Icons.local_florist_rounded,
                     ),
-                    if (data.breeder != null) ...[
+                    if (data.breeder != null && data.breeder!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       _buildDetailRow(
                         'Hersteller',
@@ -149,12 +149,9 @@ class ConfirmationStep extends ConsumerWidget {
                         Icons.business_rounded,
                       ),
                     ],
-
                     const SizedBox(height: 16),
                     const Divider(),
                     const SizedBox(height: 12),
-
-                    // Datumsangaben
                     Text(
                       'Wichtige Daten',
                       style: TextStyle(
@@ -164,7 +161,6 @@ class ConfirmationStep extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-
                     if (data.seedDate != null) ...[
                       _buildDetailRow(
                         'Aussaatdatum',
@@ -173,27 +169,22 @@ class ConfirmationStep extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                     ],
-
                     if (data.germinationDate != null) ...[
                       _buildDetailRow(
                         'Keimungsdatum',
                         _formatDate(data.germinationDate),
-                        Icons.local_florist_rounded,
+                        Icons.spa_rounded,
                       ),
                       const SizedBox(height: 8),
                     ],
-
                     _buildDetailRow(
-                      'Start der Dokumentation',
-                      _formatDate(data.documentationStartDate),
-                      Icons.description_rounded,
+                      'Pflanzdatum',
+                      _formatDate(data.plantedDate),
+                      Icons.calendar_today_rounded,
                     ),
-
                     const SizedBox(height: 16),
                     const Divider(),
                     const SizedBox(height: 12),
-
-                    // Anbau-Details
                     _buildDetailRow(
                       'Medium',
                       data.medium?.displayName ?? '--',
@@ -205,23 +196,16 @@ class ConfirmationStep extends ConsumerWidget {
                       data.location?.displayName ?? '--',
                       Icons.location_on_rounded,
                     ),
-
-                    // Ernteschätzung
                     if (data.estimatedHarvestDays != null) ...[
                       const SizedBox(height: 12),
                       _buildDetailRow(
                         'Ernteschätzung',
                         _formatHarvestEstimate(
-                            data.estimatedHarvestDays,
-                            data.seedDate ??
-                                data.germinationDate ??
-                                data.documentationStartDate),
+                            data.estimatedHarvestDays, harvestBaseDate),
                         Icons.agriculture_rounded,
                       ),
                     ],
-
-                    // Notizen
-                    if (data.notes != null) ...[
+                    if (data.notes != null && data.notes!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 12),
@@ -263,8 +247,6 @@ class ConfirmationStep extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 32),
-
-            // Ernteschätzung-Info
             if (data.estimatedHarvestDays != null) ...[
               Container(
                 padding: const EdgeInsets.all(16),
@@ -315,8 +297,6 @@ class ConfirmationStep extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
             ],
-
-            // QR-Code Info
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

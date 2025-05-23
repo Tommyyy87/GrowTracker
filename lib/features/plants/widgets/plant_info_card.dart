@@ -23,7 +23,6 @@ class PlantInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header mit Status
             Row(
               children: [
                 Expanded(
@@ -31,7 +30,7 @@ class PlantInfoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        plant.strain,
+                        plant.strain, // Behält strain, da dies Sortenname ist
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -72,8 +71,6 @@ class PlantInfoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Ernteschätzung (prominent anzeigen wenn verfügbar)
             if (plant.estimatedHarvestDate != null) ...[
               Container(
                 width: double.infinity,
@@ -150,8 +147,6 @@ class PlantInfoCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
             ],
-
-            // Info Grid
             Column(
               children: [
                 _buildInfoRow(
@@ -173,8 +168,8 @@ class PlantInfoCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
-                  plant.primaryDateLabel,
-                  _formatDate(plant.primaryDate),
+                  plant.primaryDisplayDateLabel, // Korrigiert
+                  _formatDate(plant.primaryDisplayDate), // Korrigiert
                   Icons.calendar_today_rounded,
                 ),
                 const SizedBox(height: 12),
@@ -189,10 +184,8 @@ class PlantInfoCard extends StatelessWidget {
                   plant.location.displayName,
                   Icons.location_on_rounded,
                 ),
-
-                // Zusätzliche Datumsangaben falls vorhanden
                 if (plant.seedDate != null &&
-                    plant.primaryDate != plant.seedDate) ...[
+                    plant.primaryDisplayDate != plant.seedDate) ...[ // Korrigiert
                   const SizedBox(height: 12),
                   _buildInfoRow(
                     'Aussaat',
@@ -201,7 +194,7 @@ class PlantInfoCard extends StatelessWidget {
                   ),
                 ],
                 if (plant.germinationDate != null &&
-                    plant.primaryDate != plant.germinationDate) ...[
+                    plant.primaryDisplayDate != plant.germinationDate) ...[ // Korrigiert
                   const SizedBox(height: 12),
                   _buildInfoRow(
                     'Keimung',
@@ -209,18 +202,19 @@ class PlantInfoCard extends StatelessWidget {
                     Icons.local_florist_rounded,
                   ),
                 ],
-                if (plant.documentationStartDate != plant.primaryDate) ...[
+                // Überlegung: plantedDate ist jetzt das Hauptdatum. Anzeigen, wenn es von seed/germ abweicht?
+                // Aktuell ist primaryDisplayDate das früheste von seed, germination oder plantedDate.
+                // Wenn plantedDate explizit als "Start der Dokumentation" angezeigt werden soll, wenn es von seed/germ abweicht:
+                if (plant.plantedDate != plant.primaryDisplayDate) ...[
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                    'Dokumentation',
-                    _formatDate(plant.documentationStartDate),
+                    'Gepflanzt / Doku-Start', // Angepasst
+                    _formatDate(plant.plantedDate), // Verwendet plantedDate
                     Icons.description_rounded,
                   ),
                 ],
               ],
             ),
-
-            // Status-Beschreibung
             if (plant.status.description.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(

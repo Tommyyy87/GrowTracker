@@ -35,62 +35,110 @@ class _CultivationDetailsStepState
   }
 
   void _updateNotes() {
-    ref.read(addPlantDataProvider.notifier).update((state) => state
-      ..notes = _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim());
+    ref.read(addPlantDataProvider.notifier).update((currentData) {
+      return AddPlantData(
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        name: currentData.name,
+        plantType: currentData.plantType,
+        initialStatus: currentData.initialStatus,
+        strain: currentData.strain,
+        breeder: currentData.breeder,
+        seedDate: currentData.seedDate,
+        germinationDate: currentData.germinationDate,
+        plantedDate: currentData.plantedDate,
+        medium: currentData.medium,
+        location: currentData.location,
+        estimatedHarvestDays: currentData.estimatedHarvestDays,
+        photoPath: currentData.photoPath,
+      );
+    });
   }
 
   void _updateHarvestDays() {
     final text = _harvestDaysController.text.trim();
     final days = text.isEmpty ? null : int.tryParse(text);
-    ref
-        .read(addPlantDataProvider.notifier)
-        .update((state) => state..estimatedHarvestDays = days);
+    ref.read(addPlantDataProvider.notifier).update((currentData) {
+      return AddPlantData(
+        estimatedHarvestDays: days,
+        name: currentData.name,
+        plantType: currentData.plantType,
+        initialStatus: currentData.initialStatus,
+        strain: currentData.strain,
+        breeder: currentData.breeder,
+        seedDate: currentData.seedDate,
+        germinationDate: currentData.germinationDate,
+        plantedDate: currentData.plantedDate,
+        medium: currentData.medium,
+        location: currentData.location,
+        notes: currentData.notes,
+        photoPath: currentData.photoPath,
+      );
+    });
   }
 
   Future<void> _selectDate(String dateType) async {
-    final data = ref.read(addPlantDataProvider);
-    DateTime? initialDate;
-    DateTime? selectedDate;
+    final currentData = ref.read(addPlantDataProvider);
+    DateTime? initialDateForPicker;
 
     switch (dateType) {
       case 'seed':
-        initialDate =
-            data.seedDate ?? DateTime.now().subtract(const Duration(days: 30));
+        initialDateForPicker = currentData.seedDate ??
+            DateTime.now().subtract(const Duration(days: 30));
         break;
       case 'germination':
-        initialDate = data.germinationDate ??
-            data.seedDate?.add(const Duration(days: 5)) ??
+        initialDateForPicker = currentData.germinationDate ??
+            currentData.seedDate?.add(const Duration(days: 5)) ??
             DateTime.now().subtract(const Duration(days: 25));
         break;
-      case 'documentation':
-        initialDate = data.documentationStartDate ?? DateTime.now();
+      case 'planted':
+        initialDateForPicker = currentData.plantedDate ?? DateTime.now();
         break;
+      default:
+        initialDateForPicker = DateTime.now();
     }
 
-    selectedDate = await showDatePicker(
+    final selectedDate = await showDatePicker(
       context: context,
-      initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDate: initialDateForPicker,
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 3)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       helpText: _getDatePickerTitle(dateType),
     );
 
     if (selectedDate != null) {
-      ref.read(addPlantDataProvider.notifier).update((state) {
+      ref.read(addPlantDataProvider.notifier).update((currentDataInternal) {
+        DateTime? newSeedDate = currentDataInternal.seedDate;
+        DateTime? newGerminationDate = currentDataInternal.germinationDate;
+        DateTime? newPlantedDate = currentDataInternal.plantedDate;
+
         switch (dateType) {
           case 'seed':
-            state.seedDate = selectedDate;
+            newSeedDate = selectedDate;
             break;
           case 'germination':
-            state.germinationDate = selectedDate;
+            newGerminationDate = selectedDate;
             break;
-          case 'documentation':
-            state.documentationStartDate = selectedDate;
+          case 'planted':
+            newPlantedDate = selectedDate;
             break;
         }
-        return state;
+        return AddPlantData(
+          seedDate: newSeedDate,
+          germinationDate: newGerminationDate,
+          plantedDate: newPlantedDate,
+          name: currentDataInternal.name,
+          plantType: currentDataInternal.plantType,
+          initialStatus: currentDataInternal.initialStatus,
+          strain: currentDataInternal.strain,
+          breeder: currentDataInternal.breeder,
+          medium: currentDataInternal.medium,
+          location: currentDataInternal.location,
+          estimatedHarvestDays: currentDataInternal.estimatedHarvestDays,
+          notes: currentDataInternal.notes,
+          photoPath: currentDataInternal.photoPath,
+        );
       });
     }
   }
@@ -101,27 +149,45 @@ class _CultivationDetailsStepState
         return 'Aussaatdatum wählen';
       case 'germination':
         return 'Keimungsdatum wählen';
-      case 'documentation':
-        return 'Start der Dokumentation wählen';
+      case 'planted':
+        return 'Pflanzdatum wählen';
       default:
         return 'Datum wählen';
     }
   }
 
   void _clearDate(String dateType) {
-    ref.read(addPlantDataProvider.notifier).update((state) {
+    ref.read(addPlantDataProvider.notifier).update((currentData) {
+      DateTime? newSeedDate = currentData.seedDate;
+      DateTime? newGerminationDate = currentData.germinationDate;
+      // Pflanzdatum (plantedDate) ist ein Pflichtfeld und sollte hier nicht auf null gesetzt werden,
+      // da der Clear-Button dafür nicht angezeigt wird.
+      DateTime? newPlantedDate = currentData.plantedDate; 
+
       switch (dateType) {
         case 'seed':
-          state.seedDate = null;
+          newSeedDate = null;
           break;
         case 'germination':
-          state.germinationDate = null;
+          newGerminationDate = null;
           break;
-        case 'documentation':
-          state.documentationStartDate = null;
-          break;
+        // Kein 'case' für 'planted', da es nicht gelöscht werden soll/kann über diesen Mechanismus
       }
-      return state;
+      return AddPlantData(
+        seedDate: newSeedDate,
+        germinationDate: newGerminationDate,
+        plantedDate: newPlantedDate,
+        name: currentData.name,
+        plantType: currentData.plantType,
+        initialStatus: currentData.initialStatus,
+        strain: currentData.strain,
+        breeder: currentData.breeder,
+        medium: currentData.medium,
+        location: currentData.location,
+        estimatedHarvestDays: currentData.estimatedHarvestDays,
+        notes: currentData.notes,
+        photoPath: currentData.photoPath,
+      );
     });
   }
 
@@ -130,29 +196,12 @@ class _CultivationDetailsStepState
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
   }
 
-  List<String> _getRequiredDateFields(PlantStatus? status) {
-    if (status == null) return [];
-
-    switch (status) {
-      case PlantStatus.seeded:
-        return ['seed', 'documentation'];
-      case PlantStatus.germinated:
-        return ['germination', 'documentation'];
-      case PlantStatus.vegetative:
-      case PlantStatus.flowering:
-      case PlantStatus.harvest:
-      case PlantStatus.drying:
-      case PlantStatus.curing:
-      case PlantStatus.completed:
-        return ['documentation'];
-    }
-  }
+  // _getRequiredDateFields ist nicht mehr nötig und wurde entfernt.
 
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(addPlantDataProvider);
-    final requiredDateFields = _getRequiredDateFields(data.initialStatus);
-
+    
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: SingleChildScrollView(
@@ -160,8 +209,6 @@ class _CultivationDetailsStepState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-
-            // Beschreibung
             Text(
               'Lege die Anbau-Details für deine Pflanze fest.',
               style: TextStyle(
@@ -170,58 +217,46 @@ class _CultivationDetailsStepState
               ),
             ),
             const SizedBox(height: 32),
-
-            // Datumsfelder basierend auf Status
-            if (data.initialStatus != null) ...[
-              Text(
-                'Wichtige Daten',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+            Text(
+              'Wichtige Daten',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Gib die bekannten Daten ein. Unbekannte Daten können leer gelassen werden.',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Gib die bekannten Daten ein. Unbekannte Daten können leer gelassen werden.',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Aussaatdatum (immer optional)
-              _buildDateField(
-                'Aussaatdatum',
-                'seed',
-                data.seedDate,
-                'Wann wurde der Samen eingepflanzt?',
-                isRequired: requiredDateFields.contains('seed'),
-              ),
-              const SizedBox(height: 16),
-
-              // Keimungsdatum (immer optional)
-              _buildDateField(
-                'Keimungsdatum',
-                'germination',
-                data.germinationDate,
-                'Wann sind die ersten Triebe sichtbar geworden?',
-                isRequired: requiredDateFields.contains('germination'),
-              ),
-              const SizedBox(height: 16),
-
-              // Dokumentationsstart (immer erforderlich)
-              _buildDateField(
-                'Start der Dokumentation',
-                'documentation',
-                data.documentationStartDate,
-                'Ab wann möchtest du diese Pflanze dokumentieren?',
-                isRequired: true,
-                defaultToToday: true,
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // Ernteschätzung
+            ),
+            const SizedBox(height: 16),
+            _buildDateField(
+              'Aussaatdatum',
+              'seed',
+              data.seedDate,
+              'Wann wurde der Samen eingepflanzt? (optional)',
+              isRequired: false,
+            ),
+            const SizedBox(height: 16),
+            _buildDateField(
+              'Keimungsdatum',
+              'germination',
+              data.germinationDate,
+              'Wann sind die ersten Triebe sichtbar geworden? (optional)',
+              isRequired: false,
+            ),
+            const SizedBox(height: 16),
+            _buildDateField(
+              'Pflanzdatum *',
+              'planted',
+              data.plantedDate,
+              'Wann wurde die Pflanze gesetzt / Dokumentation begonnen?',
+              isRequired: true,
+              defaultToToday: true,
+            ),
+            const SizedBox(height: 24),
             Text(
               'Ernteschätzung',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -253,8 +288,6 @@ class _CultivationDetailsStepState
               ),
             ),
             const SizedBox(height: 24),
-
-            // Anbaumedium
             Text(
               'Anbaumedium *',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -271,13 +304,28 @@ class _CultivationDetailsStepState
                   label: Text(medium.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
-                    ref.read(addPlantDataProvider.notifier).update(
-                        (state) => state..medium = selected ? medium : null);
+                    ref.read(addPlantDataProvider.notifier).update((currentData) {
+                      return AddPlantData(
+                        medium: selected ? medium : null,
+                        name: currentData.name,
+                        plantType: currentData.plantType,
+                        initialStatus: currentData.initialStatus,
+                        strain: currentData.strain,
+                        breeder: currentData.breeder,
+                        seedDate: currentData.seedDate,
+                        germinationDate: currentData.germinationDate,
+                        plantedDate: currentData.plantedDate,
+                        location: currentData.location,
+                        estimatedHarvestDays: currentData.estimatedHarvestDays,
+                        notes: currentData.notes,
+                        photoPath: currentData.photoPath,
+                      );
+                    });
                   },
                   selectedColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withAlpha(51), // 0.2 * 255 = 51
+                      .withAlpha(51),
                   backgroundColor: Colors.grey.shade100,
                   side: isSelected
                       ? BorderSide(color: Theme.of(context).colorScheme.primary)
@@ -286,8 +334,6 @@ class _CultivationDetailsStepState
               }).toList(),
             ),
             const SizedBox(height: 24),
-
-            // Standort
             Text(
               'Standort *',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -304,13 +350,28 @@ class _CultivationDetailsStepState
                   label: Text(location.displayName),
                   selected: isSelected,
                   onSelected: (selected) {
-                    ref.read(addPlantDataProvider.notifier).update((state) =>
-                        state..location = selected ? location : null);
+                    ref.read(addPlantDataProvider.notifier).update((currentData) {
+                      return AddPlantData(
+                        location: selected ? location : null,
+                        name: currentData.name,
+                        plantType: currentData.plantType,
+                        initialStatus: currentData.initialStatus,
+                        strain: currentData.strain,
+                        breeder: currentData.breeder,
+                        seedDate: currentData.seedDate,
+                        germinationDate: currentData.germinationDate,
+                        plantedDate: currentData.plantedDate,
+                        medium: currentData.medium,
+                        estimatedHarvestDays: currentData.estimatedHarvestDays,
+                        notes: currentData.notes,
+                        photoPath: currentData.photoPath,
+                      );
+                    });
                   },
                   selectedColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withAlpha(51), // 0.2 * 255 = 51
+                      .withAlpha(51),
                   backgroundColor: Colors.grey.shade100,
                   side: isSelected
                       ? BorderSide(color: Theme.of(context).colorScheme.primary)
@@ -319,8 +380,6 @@ class _CultivationDetailsStepState
               }).toList(),
             ),
             const SizedBox(height: 24),
-
-            // Notizen (optional)
             TextField(
               controller: _notesController,
               onChanged: (_) => _updateNotes(),
@@ -336,8 +395,6 @@ class _CultivationDetailsStepState
               ),
             ),
             const SizedBox(height: 32),
-
-            // Informationsbox
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -365,7 +422,7 @@ class _CultivationDetailsStepState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Die Ernteschätzung wird basierend auf dem frühesten bekannten Datum berechnet und in der Pflanzenansicht angezeigt.',
+                          'Die Ernteschätzung wird basierend auf dem Pflanzdatum (oder Aussaat/Keimung, falls früher) berechnet.',
                           style: TextStyle(
                             color: Colors.green.shade600,
                             fontSize: 14,
@@ -396,7 +453,7 @@ class _CultivationDetailsStepState
       children: [
         Text(
           '$label${isRequired ? ' *' : ''}',
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -451,8 +508,7 @@ class _CultivationDetailsStepState
                 ),
               ),
             ),
-            if (currentDate != null && !isRequired) ...[
-              const SizedBox(width: 8),
+            if (currentDate != null && !isRequired)
               IconButton(
                 onPressed: () => _clearDate(dateType),
                 icon: Icon(
@@ -461,19 +517,32 @@ class _CultivationDetailsStepState
                 ),
                 tooltip: 'Datum löschen',
               ),
-            ],
-            if (defaultToToday && currentDate == null) ...[
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: () {
-                  ref.read(addPlantDataProvider.notifier).update((state) {
-                    state.documentationStartDate = DateTime.now();
-                    return state;
-                  });
-                },
-                child: const Text('Heute'),
+            if (defaultToToday && currentDate == null && dateType == 'planted')
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: TextButton(
+                  onPressed: () {
+                    ref.read(addPlantDataProvider.notifier).update((currentData) {
+                      return AddPlantData(
+                        plantedDate: DateTime.now(),
+                        name: currentData.name,
+                        plantType: currentData.plantType,
+                        initialStatus: currentData.initialStatus,
+                        strain: currentData.strain,
+                        breeder: currentData.breeder,
+                        seedDate: currentData.seedDate,
+                        germinationDate: currentData.germinationDate,
+                        medium: currentData.medium,
+                        location: currentData.location,
+                        estimatedHarvestDays: currentData.estimatedHarvestDays,
+                        notes: currentData.notes,
+                        photoPath: currentData.photoPath,
+                      );
+                    });
+                  },
+                  child: const Text('Heute'),
+                ),
               ),
-            ],
           ],
         ),
       ],
