@@ -1,290 +1,138 @@
 // lib/features/plants/screens/add_plant/steps/basic_info_step.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-import '../../../../../data/models/plant.dart';
-import '../add_plant_wizard.dart';
+import '../../../../../data/models/plant.dart'; // Für Enums PlantType, PlantStatus
+import '../add_plant_wizard.dart'; // Stellt AddPlantData und Provider bereit
 
-class BasicInfoStep extends ConsumerStatefulWidget {
+class BasicInfoStep extends ConsumerWidget {
   const BasicInfoStep({super.key});
 
-  @override
-  ConsumerState<BasicInfoStep> createState() => _BasicInfoStepState();
-}
-
-class _BasicInfoStepState extends ConsumerState<BasicInfoStep> {
-  final _nameController = TextEditingController();
-  final _strainController = TextEditingController();
-  final _breederController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    final data = ref.read(addPlantDataProvider);
-    _nameController.text = data.name ?? '';
-    _strainController.text = data.strain ?? '';
-    _breederController.text = data.breeder ?? '';
+  Future<void> _selectDate(
+      BuildContext context,
+      WidgetRef ref,
+      DateTime? initialDate,
+      // Diese Funktion wird aufgerufen, wenn ein Datum ausgewählt wurde
+      // und aktualisiert den entsprechenden Datumsfeld im addPlantDataProvider
+      void Function(DateTime) onDateSelectedInProvider) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(
+          days: 365)), // Erlaube auch zukünftige Daten für Planung
+    );
+    if (picked != null && picked != initialDate) {
+      onDateSelectedInProvider(picked);
+    }
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _strainController.dispose();
-    _breederController.dispose();
-    super.dispose();
-  }
-
-  void _updateData() {
-    ref.read(addPlantDataProvider.notifier).update((currentData) {
-      return AddPlantData(
-        name: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
-        strain: _strainController.text.trim().isEmpty
-            ? null
-            : _strainController.text.trim(),
-        breeder: _breederController.text.trim().isEmpty
-            ? null
-            : _breederController.text.trim(),
-        plantType: currentData.plantType,
-        initialStatus: currentData.initialStatus,
-        seedDate: currentData.seedDate,
-        germinationDate: currentData.germinationDate,
-        plantedDate: currentData.plantedDate, // Korrigiert
-        medium: currentData.medium,
-        location: currentData.location,
-        estimatedHarvestDays: currentData.estimatedHarvestDays,
-        notes: currentData.notes,
-        photoPath: currentData.photoPath,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Beobachte den aktuellen Zustand der AddPlantData
     final data = ref.watch(addPlantDataProvider);
+    // Hole den Notifier, um den Zustand zu aktualisieren
+    final dataNotifier = ref.read(addPlantDataProvider.notifier);
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
-      child: SingleChildScrollView(
+      child: Form(
+        // autovalidateMode: AutovalidateMode.onUserInteraction, // Bei Bedarf aktivieren
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            TextFormField(
+              initialValue: data.name,
+              decoration: const InputDecoration(labelText: 'Name der Pflanze*'),
+              // Aktualisiere das 'name'-Feld im Provider bei jeder Änderung
+              onChanged: (value) =>
+                  dataNotifier.update((state) => state.copyWith(name: value)),
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Name ist erforderlich'
+                  : null,
+            ),
             const SizedBox(height: 16),
-            Text(
-              'Gib die grundlegenden Informationen zu deiner Pflanze ein.',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 16,
-              ),
+            DropdownButtonFormField<PlantType>(
+              value: data.plantType,
+              decoration: const InputDecoration(labelText: 'Pflanzenart*'),
+              items: PlantType.values
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type.displayName),
+                      ))
+                  .toList(),
+              onChanged: (value) => dataNotifier
+                  .update((state) => state.copyWith(plantType: value)),
+              validator: (value) =>
+                  value == null ? 'Pflanzenart ist erforderlich' : null,
             ),
-            const SizedBox(height: 32),
-            TextField(
-              controller: _nameController,
-              onChanged: (_) => _updateData(),
-              decoration: InputDecoration(
-                labelText: 'Name der Pflanze *',
-                hintText: 'z.B. Meine White Widow #1',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.eco_rounded),
-              ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<PlantStatus>(
+              value: data.initialStatus,
+              decoration: const InputDecoration(labelText: 'Aktueller Status*'),
+              items: PlantStatus.values
+                  .map((status) => DropdownMenuItem(
+                        value: status,
+                        child: Text(status.displayName),
+                      ))
+                  .toList(),
+              onChanged: (value) => dataNotifier
+                  .update((state) => state.copyWith(initialStatus: value)),
+              validator: (value) =>
+                  value == null ? 'Status ist erforderlich' : null,
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Pflanzenart *',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: data.strain,
+              decoration: const InputDecoration(labelText: 'Sorte/Strain*'),
+              onChanged: (value) =>
+                  dataNotifier.update((state) => state.copyWith(strain: value)),
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Sorte ist erforderlich'
+                  : null,
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: PlantType.values.map((type) {
-                final isSelected = data.plantType == type;
-                return ChoiceChip(
-                  label: Text(type.displayName),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    ref.read(addPlantDataProvider.notifier).update((currentData) {
-                      return AddPlantData(
-                        plantType: selected ? type : null,
-                        name: currentData.name,
-                        initialStatus: currentData.initialStatus,
-                        strain: currentData.strain,
-                        breeder: currentData.breeder,
-                        seedDate: currentData.seedDate,
-                        germinationDate: currentData.germinationDate,
-                        plantedDate: currentData.plantedDate, // Korrigiert
-                        medium: currentData.medium,
-                        location: currentData.location,
-                        estimatedHarvestDays: currentData.estimatedHarvestDays,
-                        notes: currentData.notes,
-                        photoPath: currentData.photoPath,
-                      );
-                    });
-                  },
-                  selectedColor: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withAlpha(51), 
-                  backgroundColor: Colors.grey.shade100,
-                  side: isSelected
-                      ? BorderSide(color: Theme.of(context).colorScheme.primary)
-                      : BorderSide(color: Colors.grey.shade300),
-                );
-              }).toList(),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: data.breeder,
+              decoration:
+                  const InputDecoration(labelText: 'Züchter/Marke (optional)'),
+              onChanged: (value) => dataNotifier.update((state) =>
+                  state.copyWith(
+                      breeder: value.isEmpty ? null : value,
+                      setBreederNull: value.isEmpty)),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Aktueller Status *',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
+            Text('Wichtige Daten (optional):',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(
-              'In welchem Stadium befindet sich deine Pflanze gerade?',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
-              ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(data.seedDate == null
+                  ? 'Aussaatdatum'
+                  : 'Aussaat: ${DateFormat('dd.MM.yyyy').format(data.seedDate!)}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(
+                  context,
+                  ref,
+                  data.seedDate,
+                  // Hier wird das seedDate-Feld im Provider aktualisiert
+                  (date) => dataNotifier
+                      .update((state) => state.copyWith(seedDate: date))),
             ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              children: PlantStatus.values.map((status) {
-                final isSelected = data.initialStatus == status;
-                return InkWell(
-                  onTap: () {
-                    ref.read(addPlantDataProvider.notifier).update((currentData) {
-                      return AddPlantData(
-                        initialStatus: status,
-                        name: currentData.name,
-                        plantType: currentData.plantType,
-                        strain: currentData.strain,
-                        breeder: currentData.breeder,
-                        seedDate: currentData.seedDate,
-                        germinationDate: currentData.germinationDate,
-                        plantedDate: currentData.plantedDate, // Korrigiert
-                        medium: currentData.medium,
-                        location: currentData.location,
-                        estimatedHarvestDays: currentData.estimatedHarvestDays,
-                        notes: currentData.notes,
-                        photoPath: currentData.photoPath,
-                      );
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary.withAlpha(51)
-                          : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.shade300,
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          status.displayName,
-                          style: TextStyle(
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.black87,
-                            fontSize: 13,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _strainController,
-              onChanged: (_) => _updateData(),
-              decoration: InputDecoration(
-                labelText: 'Sorte/Genetik *',
-                hintText: 'z.B. White Widow, Cherry Tomaten',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.local_florist_rounded),
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _breederController,
-              onChanged: (_) => _updateData(),
-              decoration: InputDecoration(
-                labelText: 'Hersteller/Saatgut-Anbieter',
-                hintText: 'z.B. Royal Queen Seeds, Kiepenkerl',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                prefixIcon: const Icon(Icons.business_rounded),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.blue.shade600,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tipp zum Status',
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Wähle den aktuellen Status deiner Pflanze. Dies bestimmt, welche Datumsfelder im nächsten Schritt angezeigt werden.',
-                          style: TextStyle(
-                            color: Colors.blue.shade600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(data.germinationDate == null
+                  ? 'Keimdatum'
+                  : 'Keimung: ${DateFormat('dd.MM.yyyy').format(data.germinationDate!)}'),
+              trailing: const Icon(Icons.calendar_today),
+              onTap: () => _selectDate(
+                  context,
+                  ref,
+                  data.germinationDate,
+                  // Hier wird das germinationDate-Feld im Provider aktualisiert
+                  (date) => dataNotifier.update(
+                      (state) => state.copyWith(germinationDate: date))),
             ),
           ],
         ),

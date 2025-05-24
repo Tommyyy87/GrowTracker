@@ -1,6 +1,6 @@
 // lib/features/plants/widgets/plant_info_card.dart
+import 'dart:io'; // Für File-Check
 import 'package:flutter/material.dart';
-
 import '../../../data/models/plant.dart';
 
 class PlantInfoCard extends StatelessWidget {
@@ -18,6 +18,8 @@ class PlantInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -25,24 +27,61 @@ class PlantInfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                // Foto der Pflanze oder Platzhalter
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: plant.photoUrl != null &&
+                            plant.photoUrl!.startsWith('http')
+                        ? Image.network(
+                            plant.photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.eco_rounded,
+                                    size: 30, color: Colors.grey),
+                          )
+                        : plant.photoUrl != null &&
+                                File(plant.photoUrl!).existsSync()
+                            ? Image.file(
+                                File(plant.photoUrl!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(Icons.eco_rounded,
+                                        size: 30, color: Colors.grey),
+                              )
+                            : const Icon(Icons.eco_rounded,
+                                size: 30, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        plant.strain, // Behält strain, da dies Sortenname ist
+                        plant.name, // Name statt Strain hier
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (plant.breeder != null)
+                      if (plant.strain.isNotEmpty) // Strain als Sub-Info
                         Text(
-                          plant.breeder!,
+                          plant.strain,
                           style: TextStyle(
                             color: Colors.grey.shade600,
                             fontSize: 14,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                     ],
                   ),
@@ -77,28 +116,42 @@ class PlantInfoCard extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: plant.daysUntilHarvest != null &&
-                          plant.daysUntilHarvest! <= 7
+                          plant.daysUntilHarvest! <= 7 &&
+                          plant.daysUntilHarvest! >= 0
                       ? Colors.orange.shade50
-                      : Colors.green.shade50,
+                      : plant.daysUntilHarvest != null &&
+                              plant.daysUntilHarvest! < 0
+                          ? Colors.red.shade50
+                          : Colors.green.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: plant.daysUntilHarvest != null &&
-                            plant.daysUntilHarvest! <= 7
+                            plant.daysUntilHarvest! <= 7 &&
+                            plant.daysUntilHarvest! >= 0
                         ? Colors.orange.shade200
-                        : Colors.green.shade200,
+                        : plant.daysUntilHarvest != null &&
+                                plant.daysUntilHarvest! < 0
+                            ? Colors.red.shade200
+                            : Colors.green.shade200,
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       plant.daysUntilHarvest != null &&
-                              plant.daysUntilHarvest! <= 7
-                          ? Icons.warning_rounded
-                          : Icons.agriculture_rounded,
+                              plant.daysUntilHarvest! < 0
+                          ? Icons.error_outline_rounded
+                          : plant.daysUntilHarvest != null &&
+                                  plant.daysUntilHarvest! <= 7
+                              ? Icons.warning_amber_rounded
+                              : Icons.agriculture_rounded,
                       color: plant.daysUntilHarvest != null &&
-                              plant.daysUntilHarvest! <= 7
-                          ? Colors.orange.shade600
-                          : Colors.green.shade600,
+                              plant.daysUntilHarvest! < 0
+                          ? Colors.red.shade600
+                          : plant.daysUntilHarvest != null &&
+                                  plant.daysUntilHarvest! <= 7
+                              ? Colors.orange.shade600
+                              : Colors.green.shade600,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -111,9 +164,12 @@ class PlantInfoCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: plant.daysUntilHarvest != null &&
-                                      plant.daysUntilHarvest! <= 7
-                                  ? Colors.orange.shade700
-                                  : Colors.green.shade700,
+                                      plant.daysUntilHarvest! < 0
+                                  ? Colors.red.shade700
+                                  : plant.daysUntilHarvest != null &&
+                                          plant.daysUntilHarvest! <= 7
+                                      ? Colors.orange.shade700
+                                      : Colors.green.shade700,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -122,21 +178,27 @@ class PlantInfoCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               color: plant.daysUntilHarvest != null &&
-                                      plant.daysUntilHarvest! <= 7
-                                  ? Colors.orange.shade800
-                                  : Colors.green.shade800,
+                                      plant.daysUntilHarvest! < 0
+                                  ? Colors.red.shade800
+                                  : plant.daysUntilHarvest != null &&
+                                          plant.daysUntilHarvest! <= 7
+                                      ? Colors.orange.shade800
+                                      : Colors.green.shade800,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           if (plant.estimatedHarvestDate != null)
                             Text(
-                              'ca. ${_formatDate(plant.estimatedHarvestDate!)}',
+                              'am ${_formatDate(plant.estimatedHarvestDate!)}',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: plant.daysUntilHarvest != null &&
-                                        plant.daysUntilHarvest! <= 7
-                                    ? Colors.orange.shade600
-                                    : Colors.green.shade600,
+                                        plant.daysUntilHarvest! < 0
+                                    ? Colors.red.shade600
+                                    : plant.daysUntilHarvest != null &&
+                                            plant.daysUntilHarvest! <= 7
+                                        ? Colors.orange.shade600
+                                        : Colors.green.shade600,
                               ),
                             ),
                         ],
@@ -149,69 +211,52 @@ class PlantInfoCard extends StatelessWidget {
             ],
             Column(
               children: [
-                _buildInfoRow(
-                  'ID',
-                  plant.displayId,
-                  Icons.tag_rounded,
-                ),
+                _buildInfoRow('ID', plant.displayId, Icons.tag_rounded),
                 const SizedBox(height: 12),
-                _buildInfoRow(
-                  'Pflanzenart',
-                  plant.plantType.displayName,
-                  Icons.category_rounded,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  'Alter',
-                  '${plant.ageInDays} Tage',
-                  Icons.schedule_rounded,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  plant.primaryDisplayDateLabel, // Korrigiert
-                  _formatDate(plant.primaryDisplayDate), // Korrigiert
-                  Icons.calendar_today_rounded,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  'Medium',
-                  plant.medium.displayName,
-                  Icons.grass_rounded,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  'Standort',
-                  plant.location.displayName,
-                  Icons.location_on_rounded,
-                ),
-                if (plant.seedDate != null &&
-                    plant.primaryDisplayDate != plant.seedDate) ...[ // Korrigiert
+                if (plant.breeder != null && plant.breeder!.isNotEmpty) ...[
+                  _buildInfoRow('Züchter/Marke', plant.breeder!,
+                      Icons.business_center_rounded),
                   const SizedBox(height: 12),
-                  _buildInfoRow(
-                    'Aussaat',
-                    _formatDate(plant.seedDate!),
-                    Icons.eco_rounded,
-                  ),
+                ],
+                _buildInfoRow('Pflanzenart', plant.plantType.displayName,
+                    Icons.category_rounded),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                    'Alter', '${plant.ageInDays} Tage', Icons.schedule_rounded),
+                const SizedBox(height: 12),
+                // KORREKTUR HIER:
+                _buildInfoRow(
+                    plant.primaryDateLabel,
+                    _formatDate(plant.primaryDate),
+                    Icons.calendar_today_rounded),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                    'Medium', plant.medium.displayName, Icons.grass_rounded),
+                const SizedBox(height: 12),
+                _buildInfoRow('Standort', plant.location.displayName,
+                    Icons.location_on_rounded),
+
+                // KORREKTUR HIER (und Logik angepasst):
+                if (plant.seedDate != null &&
+                    plant.seedDate != plant.primaryDate) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Aussaat', _formatDate(plant.seedDate!),
+                      Icons.eco_rounded),
                 ],
                 if (plant.germinationDate != null &&
-                    plant.primaryDisplayDate != plant.germinationDate) ...[ // Korrigiert
+                    plant.germinationDate != plant.primaryDate) ...[
                   const SizedBox(height: 12),
-                  _buildInfoRow(
-                    'Keimung',
-                    _formatDate(plant.germinationDate!),
-                    Icons.local_florist_rounded,
-                  ),
+                  _buildInfoRow('Keimung', _formatDate(plant.germinationDate!),
+                      Icons.spa_rounded),
                 ],
-                // Überlegung: plantedDate ist jetzt das Hauptdatum. Anzeigen, wenn es von seed/germ abweicht?
-                // Aktuell ist primaryDisplayDate das früheste von seed, germination oder plantedDate.
-                // Wenn plantedDate explizit als "Start der Dokumentation" angezeigt werden soll, wenn es von seed/germ abweicht:
-                if (plant.plantedDate != plant.primaryDisplayDate) ...[
+                if (plant.documentationStartDate != plant.primaryDate &&
+                    plant.documentationStartDate != plant.seedDate &&
+                    plant.documentationStartDate != plant.germinationDate) ...[
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                    'Gepflanzt / Doku-Start', // Angepasst
-                    _formatDate(plant.plantedDate), // Verwendet plantedDate
-                    Icons.description_rounded,
-                  ),
+                      'Doku-Start',
+                      _formatDate(plant.documentationStartDate),
+                      Icons.description_rounded),
                 ],
               ],
             ),
@@ -226,19 +271,14 @@ class PlantInfoCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Colors.grey.shade600,
-                      size: 16,
-                    ),
+                    Icon(Icons.info_outline,
+                        color: Colors.grey.shade600, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         plant.status.description,
                         style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
-                        ),
+                            color: Colors.grey.shade600, fontSize: 13),
                       ),
                     ),
                   ],
@@ -254,11 +294,7 @@ class PlantInfoCard extends StatelessWidget {
   Widget _buildInfoRow(String label, String value, IconData icon) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: Colors.grey.shade600,
-          size: 18,
-        ),
+        Icon(icon, color: Colors.grey.shade600, size: 18),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -267,18 +303,13 @@ class PlantInfoCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
-                ),
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500),
               ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         ),

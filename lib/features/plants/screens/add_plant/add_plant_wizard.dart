@@ -4,27 +4,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../data/models/plant.dart';
+import '../../../../data/models/plant.dart'; // Brauchen wir für Enums
 import '../../controllers/plant_controller.dart';
 import 'steps/basic_info_step.dart';
 import 'steps/cultivation_details_step.dart';
 import 'steps/photo_step.dart';
 import 'steps/confirmation_step.dart';
 
+// AddPlantData ist jetzt hier definiert und verwendet documentationStartDate
 class AddPlantData {
-  String? name;
-  PlantType? plantType;
-  PlantStatus? initialStatus;
-  String? strain;
-  String? breeder;
-  DateTime? seedDate;
-  DateTime? germinationDate;
-  DateTime? plantedDate; // Umbenannt von documentationStartDate
-  PlantMedium? medium;
-  PlantLocation? location;
-  int? estimatedHarvestDays;
-  String? notes;
-  String? photoPath;
+  final String? name;
+  final PlantType? plantType;
+  final PlantStatus? initialStatus;
+  final String? strain;
+  final String? breeder;
+  final DateTime? seedDate;
+  final DateTime? germinationDate;
+  final DateTime? documentationStartDate; // Umbenannt und zentral
+  final PlantMedium? medium;
+  final PlantLocation? location;
+  final int? estimatedHarvestDays;
+  final String? notes;
+  final String? photoPath;
 
   AddPlantData({
     this.name,
@@ -34,7 +35,7 @@ class AddPlantData {
     this.breeder,
     this.seedDate,
     this.germinationDate,
-    this.plantedDate, // Umbenannt
+    this.documentationStartDate,
     this.medium,
     this.location,
     this.estimatedHarvestDays,
@@ -50,14 +51,59 @@ class AddPlantData {
       strain!.isNotEmpty &&
       initialStatus != null;
 
-  // Prüft jetzt auf plantedDate
+  // Wichtig: documentationStartDate ist jetzt das Pflichtfeld für diesen Schritt
   bool get isCultivationComplete =>
-      plantedDate != null && medium != null && location != null;
+      documentationStartDate != null && medium != null && location != null;
 
   bool get isReadyToCreate => isBasicInfoComplete && isCultivationComplete;
 
-  // Gibt plantedDate zurück oder das aktuelle Datum als Fallback
-  DateTime get effectivePlantedDate => plantedDate ?? DateTime.now();
+  // Stellt sicher, dass immer ein Datum für die Erstellung der Pflanze vorhanden ist
+  DateTime get effectiveDocumentationDate =>
+      documentationStartDate ?? DateTime.now();
+
+  AddPlantData copyWith({
+    String? name,
+    PlantType? plantType,
+    PlantStatus? initialStatus,
+    String? strain,
+    String? breeder,
+    DateTime? seedDate,
+    DateTime? germinationDate,
+    DateTime? documentationStartDate,
+    PlantMedium? medium,
+    PlantLocation? location,
+    int? estimatedHarvestDays,
+    String? notes,
+    String? photoPath,
+    // Erlaube explizites Null-Setzen für optionale Felder
+    bool setBreederNull = false,
+    bool setSeedDateNull = false,
+    bool setGerminationDateNull = false,
+    bool setEstimatedHarvestDaysNull = false,
+    bool setNotesNull = false,
+    bool setPhotoPathNull = false,
+  }) {
+    return AddPlantData(
+      name: name ?? this.name,
+      plantType: plantType ?? this.plantType,
+      initialStatus: initialStatus ?? this.initialStatus,
+      strain: strain ?? this.strain,
+      breeder: setBreederNull ? null : (breeder ?? this.breeder),
+      seedDate: setSeedDateNull ? null : (seedDate ?? this.seedDate),
+      germinationDate: setGerminationDateNull
+          ? null
+          : (germinationDate ?? this.germinationDate),
+      documentationStartDate:
+          documentationStartDate ?? this.documentationStartDate,
+      medium: medium ?? this.medium,
+      location: location ?? this.location,
+      estimatedHarvestDays: setEstimatedHarvestDaysNull
+          ? null
+          : (estimatedHarvestDays ?? this.estimatedHarvestDays),
+      notes: setNotesNull ? null : (notes ?? this.notes),
+      photoPath: setPhotoPathNull ? null : (photoPath ?? this.photoPath),
+    );
+  }
 }
 
 final addPlantDataProvider =
@@ -111,13 +157,15 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
   Future<void> _createPlant() async {
     final data = ref.read(addPlantDataProvider);
     if (!data.isReadyToCreate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Bitte fülle alle Pflichtfelder aus. Basic: ${data.isBasicInfoComplete}, Cult: ${data.isCultivationComplete}'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
+      if (mounted) {
+        // mounted check
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Bitte fülle alle Pflichtfelder aus.'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
       return;
     }
 
@@ -132,8 +180,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         breeder: data.breeder,
         seedDate: data.seedDate,
         germinationDate: data.germinationDate,
-        plantedDate:
-            data.effectivePlantedDate, // Verwendet effectivePlantedDate
+        documentationStartDate:
+            data.effectiveDocumentationDate, // Verwende das effektive Datum
         medium: data.medium!,
         location: data.location!,
         initialStatus: data.initialStatus!,
@@ -149,15 +197,15 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             backgroundColor: AppColors.successColor,
           ),
         );
-        ref.read(addPlantDataProvider.notifier).state = AddPlantData();
+        ref.read(addPlantDataProvider.notifier).state =
+            AddPlantData(); // Reset data
         context.goNamed('dashboard');
       } else {
-        // Der Fehler wird jetzt detaillierter vom Controller erwartet oder hier als generischer Fehler behandelt
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Pflanze konnte nicht erstellt werden. Überprüfe die Debug-Konsole für Details.'),
+            SnackBar(
+              content: const Text(
+                  'Pflanze konnte nicht erstellt werden. Details siehe Konsole.'),
               backgroundColor: AppColors.errorColor,
             ),
           );
@@ -181,15 +229,14 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   bool _canProceed() {
     final data = ref.watch(addPlantDataProvider);
-
     switch (_currentStep) {
-      case 0: // Basic Info
+      case 0:
         return data.isBasicInfoComplete;
-      case 1: // Cultivation Details
+      case 1:
         return data.isCultivationComplete;
-      case 2: // Photo (optional)
-        return true;
-      case 3: // Confirmation
+      case 2:
+        return true; // Fotoseite kann immer übersprungen werden
+      case 3:
         return data.isReadyToCreate;
       default:
         return false;
@@ -198,8 +245,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -212,7 +257,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
-            ref.read(addPlantDataProvider.notifier).state = AddPlantData();
+            ref.read(addPlantDataProvider.notifier).state =
+                AddPlantData(); // Reset data
             context.goNamed('dashboard');
           },
         ),
@@ -253,7 +299,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
+              physics:
+                  const NeverScrollableScrollPhysics(), // Deaktiviert Swipe-Navigation
               children: const [
                 BasicInfoStep(),
                 CultivationDetailsStep(),
@@ -283,20 +330,22 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         side: BorderSide(color: Colors.grey.shade300),
-                        foregroundColor: theme.colorScheme.primary,
+                        foregroundColor: Colors.grey.shade700,
                       ),
                       child: const Text('Zurück'),
                     ),
                   ),
                 if (_currentStep > 0) const SizedBox(width: 16),
                 Expanded(
-                  flex: _currentStep == 0 ? 1 : 1,
+                  flex: _currentStep == 0
+                      ? 1
+                      : 1, // Button gleich breit machen, wenn nur einer da ist
                   child: ElevatedButton(
                     onPressed: _canProceed()
                         ? (_currentStep == _stepTitles.length - 1
-                            ? _createPlant
-                            : _nextStep)
-                        : null,
+                            ? _createPlant // Auf der letzten Seite wird erstellt
+                            : _nextStep) // Sonst zum nächsten Schritt
+                        : null, // Deaktiviert, wenn _canProceed false ist
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
                       foregroundColor: Colors.white,

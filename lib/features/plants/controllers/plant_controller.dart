@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-// import 'package:uuid/uuid.dart'; // Für Uuid().v4()
 
 import '../../../data/models/plant.dart';
 import '../../../data/models/harvest.dart';
@@ -15,7 +14,9 @@ final plantRepositoryProvider = Provider<PlantRepository>((ref) {
 
 final plantsProvider = FutureProvider<List<Plant>>((ref) async {
   final repository = ref.read(plantRepositoryProvider);
-  return repository.getAllPlants();
+  final plants = await repository.getAllPlants();
+  plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return plants;
 });
 
 final plantDetailProvider =
@@ -25,24 +26,24 @@ final plantDetailProvider =
 });
 
 class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
-  PlantController(this._repository, this._ref)
+  PlantController(this._repository, this.ref)
       : super(const AsyncValue.loading()) {
-    // _ref hinzugefügt
     loadPlants();
   }
 
   final PlantRepository _repository;
-  final Ref _ref; // Ref speichern
   final ImagePicker _imagePicker = ImagePicker();
+  final Ref ref;
 
   Future<void> loadPlants() async {
     try {
       state = const AsyncValue.loading();
       final plants = await _repository.getAllPlants();
+      plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       state = AsyncValue.data(plants);
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
       debugPrint('Error loading plants in controller: $error');
+      state = AsyncValue.error(error, stackTrace);
     }
   }
 
@@ -53,7 +54,7 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
     String? breeder,
     DateTime? seedDate,
     DateTime? germinationDate,
-    required DateTime plantedDate,
+    required DateTime documentationStartDate,
     required PlantMedium medium,
     required PlantLocation location,
     PlantStatus initialStatus = PlantStatus.seeded,
@@ -61,54 +62,68 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
     String? notes,
     String? photoPath,
   }) async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) {
+      debugPrint('Error creating plant: User not authenticated');
+      throw Exception('User not authenticated');
+    }
+
+    Plant plantToCreate = Plant.create(
+      name: name,
+      plantType: plantType,
+      strain: strain,
+      breeder: breeder,
+      seedDate: seedDate,
+      germinationDate: germinationDate,
+      documentationStartDate: documentationStartDate,
+      medium: medium,
+      location: location,
+      status: initialStatus,
+      estimatedHarvestDays: estimatedHarvestDays,
+      notes: notes,
+      photoUrl: null,
+      userId: userId,
+    );
+
     try {
-      final userId = SupabaseService.currentUserId;
-      if (userId == null) {
-        debugPrint('User not authenticated for creating plant.');
-        throw Exception('User not authenticated');
+      Plant createdPlant = await _repository.createPlant(plantToCreate);
+      debugPrint('Plant record created with ID: ${createdPlant.id}');
+
+      String? uploadedPhotoUrl;
+      if (photoPath != null && photoPath.isNotEmpty) {
+        try {
+          uploadedPhotoUrl = await _repository.uploadPlantPhoto(
+              userId, createdPlant.id, photoPath);
+          debugPrint('Photo uploaded, URL: $uploadedPhotoUrl');
+        } catch (e) {
+          debugPrint('Error uploading photo during plant creation: $e');
+        }
       }
 
-      String? photoUrlToSave = photoPath;
-      // if (photoPath != null && photoPath.isNotEmpty) {
-      //   final plantIdForPhoto = const Uuid().v4();
-      //   photoUrlToSave = await _repository.uploadPlantPhoto(plantIdForPhoto, photoPath);
-      // }
+      if (uploadedPhotoUrl != null) {
+        // Korrekter Aufruf von copyWith für photoUrl
+        Plant plantWithPhoto =
+            createdPlant.copyWith(photoUrl: () => uploadedPhotoUrl);
+        createdPlant = await _repository.updatePlant(plantWithPhoto);
+        debugPrint('Plant record updated with photoUrl');
+      }
 
-      final plant = Plant.create(
-        name: name,
-        plantType: plantType,
-        strain: strain,
-        breeder: breeder,
-        seedDate: seedDate,
-        germinationDate: germinationDate,
-        plantedDate: plantedDate,
-        medium: medium,
-        location: location,
-        status: initialStatus,
-        estimatedHarvestDays: estimatedHarvestDays,
-        notes: notes,
-        photoUrl: photoUrlToSave,
-        userId: userId,
-      );
-
-      final createdPlant = await _repository.createPlant(plant);
-      await loadPlants();
-      _ref.invalidate(plantsProvider); // _ref verwenden
-      _ref.invalidate(plantStatsProvider); // _ref verwenden
+      ref.invalidate(plantsProvider);
+      ref.invalidate(plantDetailProvider(createdPlant.id));
+      ref.invalidate(plantStatsProvider);
       return createdPlant;
     } catch (e) {
       debugPrint('Error creating plant in PlantController: $e');
-      return null;
+      rethrow;
     }
   }
 
   Future<bool> updatePlant(Plant plant) async {
     try {
       await _repository.updatePlant(plant);
-      await loadPlants();
-      _ref.invalidate(plantDetailProvider(plant.id)); // _ref verwenden
-      _ref.invalidate(plantsProvider); // _ref verwenden
-      _ref.invalidate(plantStatsProvider); // _ref verwenden
+      ref.invalidate(plantsProvider);
+      ref.invalidate(plantDetailProvider(plant.id));
+      ref.invalidate(plantStatsProvider);
       return true;
     } catch (e) {
       debugPrint('Error updating plant: $e');
@@ -119,10 +134,20 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<bool> updatePlantStatus(String plantId, PlantStatus newStatus) async {
     try {
       final plant = await _repository.getPlantById(plantId);
-      if (plant == null) return false;
-
+      if (plant == null) {
+        return false;
+      }
       final updatedPlant = plant.copyWith(status: newStatus);
-      return await updatePlant(updatedPlant);
+      final success = await updatePlant(updatedPlant);
+      if (success) {
+        if (newStatus == PlantStatus.harvest ||
+            newStatus == PlantStatus.drying ||
+            newStatus == PlantStatus.completed ||
+            newStatus == PlantStatus.curing) {
+          ref.invalidate(plantHarvestsProvider(plantId));
+        }
+      }
+      return success;
     } catch (e) {
       debugPrint('Error updating plant status: $e');
       return false;
@@ -132,9 +157,12 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<bool> updateHarvestEstimate(String plantId, int? estimatedDays) async {
     try {
       final plant = await _repository.getPlantById(plantId);
-      if (plant == null) return false;
-
-      final updatedPlant = plant.copyWith(estimatedHarvestDays: estimatedDays);
+      if (plant == null) {
+        return false;
+      }
+      // Korrekter Aufruf von copyWith für estimatedHarvestDays
+      final updatedPlant =
+          plant.copyWith(estimatedHarvestDays: () => estimatedDays);
       return await updatePlant(updatedPlant);
     } catch (e) {
       debugPrint('Error updating harvest estimate: $e');
@@ -145,9 +173,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<bool> deletePlant(String plantId) async {
     try {
       await _repository.deletePlant(plantId);
-      await loadPlants();
-      _ref.invalidate(plantsProvider); // _ref verwenden
-      _ref.invalidate(plantStatsProvider); // _ref verwenden
+      ref.invalidate(plantsProvider);
+      ref.invalidate(plantStatsProvider);
       return true;
     } catch (e) {
       debugPrint('Error deleting plant: $e');
@@ -158,11 +185,10 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<String?> takePlantPhoto() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
+          source: ImageSource.camera,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85);
       return photo?.path;
     } catch (e) {
       debugPrint('Error taking photo: $e');
@@ -173,11 +199,10 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<String?> pickPlantPhoto() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
+          source: ImageSource.gallery,
+          maxWidth: 1024,
+          maxHeight: 1024,
+          imageQuality: 85);
       return photo?.path;
     } catch (e) {
       debugPrint('Error picking photo: $e');
@@ -204,15 +229,27 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         dryingCompletedDate: dryingCompletedDate,
         notes: notes,
       );
-
       await _repository.saveHarvest(harvest);
-      if (dryWeight != null) {
-        await updatePlantStatus(plantId, PlantStatus.completed);
+      ref.invalidate(plantHarvestsProvider(plantId));
+      PlantStatus newStatus;
+      if (dryWeight != null && dryingCompletedDate != null) {
+        newStatus = PlantStatus.completed;
+      } else if (dryWeight != null) {
+        newStatus = PlantStatus.curing;
       } else {
-        await updatePlantStatus(plantId, PlantStatus.drying);
+        newStatus = PlantStatus.drying;
       }
-      _ref.invalidate(plantHarvestsProvider(plantId)); // _ref verwenden
-      _ref.invalidate(plantDetailProvider(plantId)); // _ref verwenden
+      // Setze auch den Status der Pflanze auf "Ernte", wenn noch nicht geschehen
+      final currentPlant = await _repository.getPlantById(plantId);
+      if (currentPlant != null &&
+          currentPlant.status != PlantStatus.harvest &&
+          currentPlant.status != PlantStatus.drying &&
+          currentPlant.status != PlantStatus.curing &&
+          currentPlant.status != PlantStatus.completed) {
+        await updatePlantStatus(plantId, PlantStatus.harvest);
+      }
+      // Dann den spezifischeren Status
+      await updatePlantStatus(plantId, newStatus);
       return true;
     } catch (e) {
       debugPrint('Error adding harvest: $e');
@@ -223,48 +260,41 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   Future<Map<String, dynamic>> getPlantStats() async {
     try {
       final plants = await _repository.getAllPlants();
-      if (plants.isEmpty) {
-        return {
-          'total': 0,
-          'active': 0,
-          'completed': 0,
-          'statusCounts': <PlantStatus, int>{
-            for (var v in PlantStatus.values) v: 0
-          },
-          'averageAge': 0.0,
-          'harvestReady': 0,
-        };
-      }
-      final statusCounts = <PlantStatus, int>{};
-      for (final status in PlantStatus.values) {
-        statusCounts[status] = plants
-            .where((p) => p.status == status)
-            .length; // Korrigiert zu statusCounts
-      }
-
-      double totalAge = 0;
-      if (plants.isNotEmpty) {
-        totalAge =
-            plants.map((p) => p.ageInDays).reduce((a, b) => a + b).toDouble();
-      }
-
+      final statusCounts = await _repository.getPlantCountsByStatus();
       return {
         'total': plants.length,
         'active': plants
             .where((p) =>
                 p.status != PlantStatus.completed &&
+                p.status != PlantStatus.harvest &&
                 p.status != PlantStatus.drying &&
                 p.status != PlantStatus.curing)
+            .length,
+        'harvest': plants
+            .where((p) =>
+                p.status == PlantStatus.harvest ||
+                p.status == PlantStatus.drying ||
+                p.status == PlantStatus.curing)
             .length,
         'completed':
             plants.where((p) => p.status == PlantStatus.completed).length,
         'statusCounts': statusCounts,
-        'averageAge': plants.isNotEmpty ? totalAge / plants.length : 0.0,
+        'averageAge': plants.isNotEmpty && plants.any((p) => p.ageInDays >= 0)
+            ? plants
+                    .where((p) => p.ageInDays >= 0)
+                    .map((p) => p.ageInDays)
+                    .reduce((a, b) => a + b) /
+                plants.where((p) => p.ageInDays >= 0).length
+            : 0,
         'harvestReady': plants
             .where((p) =>
                 p.daysUntilHarvest != null &&
                 p.daysUntilHarvest! <= 7 &&
-                p.daysUntilHarvest! >= 0)
+                p.daysUntilHarvest! >= 0 &&
+                p.status != PlantStatus.harvest &&
+                p.status != PlantStatus.drying &&
+                p.status != PlantStatus.curing &&
+                p.status != PlantStatus.completed)
             .length,
       };
     } catch (e) {
@@ -278,7 +308,13 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       final plants = await _repository.getAllPlants();
       return plants.where((plant) {
         final daysLeft = plant.daysUntilHarvest;
-        return daysLeft != null && daysLeft >= 0 && daysLeft <= daysThreshold;
+        return daysLeft != null &&
+            daysLeft >= 0 &&
+            daysLeft <= daysThreshold &&
+            plant.status != PlantStatus.harvest &&
+            plant.status != PlantStatus.drying &&
+            plant.status != PlantStatus.curing &&
+            plant.status != PlantStatus.completed;
       }).toList();
     } catch (e) {
       debugPrint('Error getting plants near harvest: $e');
@@ -289,9 +325,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
 
 final plantControllerProvider =
     StateNotifierProvider<PlantController, AsyncValue<List<Plant>>>((ref) {
-  // ref ist hier verfügbar
   final repository = ref.read(plantRepositoryProvider);
-  return PlantController(repository, ref); // ref an den Konstruktor übergeben
+  return PlantController(repository, ref);
 });
 
 final plantHarvestsProvider =
@@ -301,13 +336,11 @@ final plantHarvestsProvider =
 });
 
 final plantStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  await ref.watch(plantsProvider.future);
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantStats();
 });
 
 final plantsNearHarvestProvider = FutureProvider<List<Plant>>((ref) async {
-  await ref.watch(plantsProvider.future);
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantsNearHarvest();
 });

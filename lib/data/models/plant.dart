@@ -57,8 +57,7 @@ class Plant {
   final String? breeder;
   final DateTime? seedDate;
   final DateTime? germinationDate;
-  final DateTime
-      plantedDate; // Umbenannt von documentationStartDate, ist das Haupt-Pflanzdatum
+  final DateTime documentationStartDate;
   final PlantMedium medium;
   final PlantLocation location;
   final PlantStatus status;
@@ -79,7 +78,7 @@ class Plant {
     this.breeder,
     this.seedDate,
     this.germinationDate,
-    required this.plantedDate, // Umbenannt
+    required this.documentationStartDate,
     required this.medium,
     required this.location,
     this.status = PlantStatus.seeded,
@@ -99,7 +98,7 @@ class Plant {
     String? breeder,
     DateTime? seedDate,
     DateTime? germinationDate,
-    required DateTime plantedDate, // Umbenannt
+    required DateTime documentationStartDate,
     required PlantMedium medium,
     required PlantLocation location,
     PlantStatus status = PlantStatus.seeded,
@@ -109,13 +108,14 @@ class Plant {
     required String userId,
   }) {
     final uuid = const Uuid();
-    final id = uuid.v4();
+    final newId = uuid.v4();
     final now = DateTime.now();
     final year = now.year;
-    final displayId = 'GT-$year-${id.substring(0, 3).toUpperCase()}';
+    final displayIdSuffix = newId.substring(0, 6).toUpperCase();
+    final displayId = 'GT-$year-$displayIdSuffix';
 
     return Plant(
-      id: id,
+      id: newId,
       displayId: displayId,
       name: name,
       plantType: plantType,
@@ -123,7 +123,7 @@ class Plant {
       breeder: breeder,
       seedDate: seedDate,
       germinationDate: germinationDate,
-      plantedDate: plantedDate, // Umbenannt
+      documentationStartDate: documentationStartDate,
       medium: medium,
       location: location,
       status: status,
@@ -141,16 +141,20 @@ class Plant {
     String? name,
     PlantType? plantType,
     String? strain,
-    String? breeder,
+    String? Function()?
+        breeder, // Akzeptiert eine Funktion, die String? zurückgibt
     DateTime? seedDate,
     DateTime? germinationDate,
-    DateTime? plantedDate, // Umbenannt
+    DateTime? documentationStartDate,
     PlantMedium? medium,
     PlantLocation? location,
     PlantStatus? status,
-    int? estimatedHarvestDays,
-    String? notes,
-    String? photoUrl,
+    int? Function()?
+        estimatedHarvestDays, // Akzeptiert eine Funktion, die int? zurückgibt
+    String? Function()?
+        notes, // Akzeptiert eine Funktion, die String? zurückgibt
+    String? Function()?
+        photoUrl, // Akzeptiert eine Funktion, die String? zurückgibt
   }) {
     return Plant(
       id: id,
@@ -158,16 +162,19 @@ class Plant {
       name: name ?? this.name,
       plantType: plantType ?? this.plantType,
       strain: strain ?? this.strain,
-      breeder: breeder ?? this.breeder,
+      breeder: breeder != null ? breeder() : this.breeder,
       seedDate: seedDate ?? this.seedDate,
       germinationDate: germinationDate ?? this.germinationDate,
-      plantedDate: plantedDate ?? this.plantedDate, // Umbenannt
+      documentationStartDate:
+          documentationStartDate ?? this.documentationStartDate,
       medium: medium ?? this.medium,
       location: location ?? this.location,
       status: status ?? this.status,
-      estimatedHarvestDays: estimatedHarvestDays ?? this.estimatedHarvestDays,
-      notes: notes ?? this.notes,
-      photoUrl: photoUrl ?? this.photoUrl,
+      estimatedHarvestDays: estimatedHarvestDays != null
+          ? estimatedHarvestDays()
+          : this.estimatedHarvestDays,
+      notes: notes != null ? notes() : this.notes,
+      photoUrl: photoUrl != null ? photoUrl() : this.photoUrl,
       qrCode: qrCode,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
@@ -178,6 +185,7 @@ class Plant {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'user_id': userId,
       'display_id': displayId,
       'name': name,
       'plant_type': plantType.name,
@@ -185,8 +193,7 @@ class Plant {
       'breeder': breeder,
       'seed_date': seedDate?.toIso8601String(),
       'germination_date': germinationDate?.toIso8601String(),
-      'planted_date': plantedDate
-          .toIso8601String(), // Geändert zu planted_date (DB Spaltenname)
+      'documentation_start_date': documentationStartDate.toIso8601String(),
       'medium': medium.name,
       'location': location.name,
       'status': status.name,
@@ -196,13 +203,13 @@ class Plant {
       'qr_code': qrCode,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'user_id': userId,
     };
   }
 
   factory Plant.fromJson(Map<String, dynamic> json) {
     return Plant(
       id: json['id'] as String,
+      userId: json['user_id'] as String,
       displayId: json['display_id'] as String,
       name: json['name'] as String,
       plantType: PlantType.values.firstWhere(
@@ -217,9 +224,8 @@ class Plant {
       germinationDate: json['germination_date'] != null
           ? DateTime.parse(json['germination_date'] as String)
           : null,
-      // Liest `planted_date` aus der DB oder alternativ `documentation_start_date` für Abwärtskompatibilität, falls alte Einträge existieren
-      plantedDate: DateTime.parse(
-          json['planted_date'] ?? json['documentation_start_date'] as String),
+      documentationStartDate:
+          DateTime.parse(json['documentation_start_date'] as String),
       medium: PlantMedium.values.firstWhere(
         (e) => e.name == json['medium'],
         orElse: () => PlantMedium.soil,
@@ -238,29 +244,33 @@ class Plant {
       qrCode: json['qr_code'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      userId: json['user_id'] as String,
     );
   }
 
-  // Getter für Alter der Pflanze (basierend auf dem frühesten bekannten Datum oder Pflanzdatum)
   int get ageInDays {
-    final referenceDate = seedDate ?? germinationDate ?? plantedDate;
-    return DateTime.now().difference(referenceDate).inDays;
+    final referenceDate = documentationStartDate;
+    final diff = DateTime.now().difference(referenceDate).inDays;
+    return diff < 0 ? 0 : diff;
   }
 
-  // Getter für geschätztes Erntedatum
   DateTime? get estimatedHarvestDate {
-    if (estimatedHarvestDays == null) return null;
-    final baseDate = seedDate ?? germinationDate ?? plantedDate;
-    return baseDate.add(Duration(days: estimatedHarvestDays!));
+    if (estimatedHarvestDays == null) {
+      return null;
+    }
+    return documentationStartDate.add(Duration(days: estimatedHarvestDays!));
   }
 
   int? get daysUntilHarvest {
     final harvestDate = estimatedHarvestDate;
-    if (harvestDate == null) return null;
-    final now = DateTime.now();
-    final difference = harvestDate.difference(now).inDays;
-    return difference >= 0 ? difference : 0;
+    if (harvestDate == null) {
+      return null;
+    }
+    final now =
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final harvestDayOnly =
+        DateTime(harvestDate.year, harvestDate.month, harvestDate.day);
+    final difference = harvestDayOnly.difference(now).inDays;
+    return difference;
   }
 
   String get harvestEstimateText {
@@ -268,14 +278,20 @@ class Plant {
     if (daysLeft == null) {
       return 'Keine Schätzung verfügbar';
     }
-    if (daysLeft == 0) {
-      return 'Erntereif!';
-    } else if (daysLeft <= 7) {
-      return 'Ernte in $daysLeft Tagen';
-    } else {
-      final weeks = (daysLeft / 7).round();
-      return 'Ernte in ca. $weeks Wochen';
+    if (daysLeft < 0) {
+      return 'Überfällig um ${daysLeft.abs()} Tag(e)';
     }
+    if (daysLeft == 0) {
+      return 'Heute erntereif!';
+    }
+    if (daysLeft == 1) {
+      return 'Ernte in 1 Tag';
+    }
+    if (daysLeft <= 7) {
+      return 'Ernte in $daysLeft Tagen';
+    }
+    final weeks = (daysLeft / 7).ceil();
+    return 'Ernte in ca. $weeks Woche(n)';
   }
 
   String get statusColor {
@@ -283,30 +299,50 @@ class Plant {
       case PlantStatus.seeded:
         return '#8D6E63';
       case PlantStatus.germinated:
-        return '#4CAF50';
+        return '#AED581';
       case PlantStatus.vegetative:
-        return '#2E7D32';
+        return '#66BB6A';
       case PlantStatus.flowering:
-        return '#FF9800';
+        return '#FFEE58';
       case PlantStatus.harvest:
-        return '#F44336';
+        return '#FFA726';
       case PlantStatus.drying:
-        return '#795548';
+        return '#A1887F';
       case PlantStatus.curing:
-        return '#9C27B0';
+        return '#7E57C2';
       case PlantStatus.completed:
-        return '#607D8B';
+        return '#BDBDBD';
     }
   }
 
-  // Das primäre Datum für die Anzeige ist jetzt eine Logik, die das relevanteste Datum auswählt
-  DateTime get primaryDisplayDate {
-    return seedDate ?? germinationDate ?? plantedDate;
+  DateTime get primaryDate {
+    // Priorität: Aussaat, dann Keimung, dann Doku-Start
+    if (seedDate != null) {
+      return seedDate!;
+    }
+    if (germinationDate != null) {
+      return germinationDate!;
+    }
+    return documentationStartDate;
   }
 
-  String get primaryDisplayDateLabel {
-    if (seedDate != null) return 'Aussaat';
-    if (germinationDate != null) return 'Keimung';
-    return 'Gepflanzt'; // Oder "Start Doku."
+  String get primaryDateLabel {
+    if (seedDate != null) {
+      if (germinationDate != null && germinationDate!.isBefore(seedDate!)) {
+        if (documentationStartDate.isBefore(germinationDate!)) {
+          return 'Doku-Start';
+        }
+        return 'Keimung';
+      }
+      if (documentationStartDate.isBefore(seedDate!)) return 'Doku-Start';
+      return 'Aussaat';
+    }
+    if (germinationDate != null) {
+      if (documentationStartDate.isBefore(germinationDate!)) {
+        return 'Doku-Start';
+      }
+      return 'Keimung';
+    }
+    return 'Doku-Start';
   }
 }
