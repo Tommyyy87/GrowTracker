@@ -43,23 +43,32 @@ class AddPlantData {
     this.photoPath,
   });
 
+  // Validierung für den ersten Schritt (Basis-Informationen)
   bool get isBasicInfoComplete =>
       name != null &&
       name!.isNotEmpty &&
-      plantType != null &&
+      plantType != null && // Jetzt Auswahl über Kachel
+      initialStatus != null && // Jetzt Auswahl über Kachel
       strain != null &&
-      strain!.isNotEmpty &&
-      initialStatus != null;
+      strain!.isNotEmpty;
 
-  // Wichtig: documentationStartDate ist jetzt das Pflichtfeld für diesen Schritt
+  // Validierung für den zweiten Schritt (Anbau-Details)
   bool get isCultivationComplete =>
-      documentationStartDate != null && medium != null && location != null;
+      documentationStartDate != null &&
+      medium != null && // Jetzt Auswahl über Kachel
+      location != null; // Jetzt Auswahl über Kachel
 
+  // Gesamtvalidierung, bevor eine Pflanze erstellt werden kann
   bool get isReadyToCreate => isBasicInfoComplete && isCultivationComplete;
 
   // Stellt sicher, dass immer ein Datum für die Erstellung der Pflanze vorhanden ist
-  DateTime get effectiveDocumentationDate =>
-      documentationStartDate ?? DateTime.now();
+  DateTime get effectiveDocumentationDate {
+    // Priorität: Aussaat, dann Keimung, dann Doku-Start (falls gesetzt), sonst heute
+    if (seedDate != null) return seedDate!;
+    if (germinationDate != null) return germinationDate!;
+    if (documentationStartDate != null) return documentationStartDate!;
+    return DateTime.now();
+  }
 
   AddPlantData copyWith({
     String? name,
@@ -67,20 +76,19 @@ class AddPlantData {
     PlantStatus? initialStatus,
     String? strain,
     String? breeder,
+    bool setBreederNull = false,
     DateTime? seedDate,
+    bool setSeedDateNull = false,
     DateTime? germinationDate,
+    bool setGerminationDateNull = false,
     DateTime? documentationStartDate,
     PlantMedium? medium,
     PlantLocation? location,
     int? estimatedHarvestDays,
-    String? notes,
-    String? photoPath,
-    // Erlaube explizites Null-Setzen für optionale Felder
-    bool setBreederNull = false,
-    bool setSeedDateNull = false,
-    bool setGerminationDateNull = false,
     bool setEstimatedHarvestDaysNull = false,
+    String? notes,
     bool setNotesNull = false,
+    String? photoPath,
     bool setPhotoPathNull = false,
   }) {
     return AddPlantData(
@@ -135,11 +143,14 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
   }
 
   void _nextStep() {
+    // Formular-Validierung explizit aufrufen, falls ein FormKey pro Step existiert
+    // Hier gehen wir davon aus, dass die Validierung im `_canProceed` behandelt wird.
     if (_currentStep < _stepTitles.length - 1) {
       setState(() => _currentStep++);
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
@@ -147,9 +158,10 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
   void _previousStep() {
     if (_currentStep > 0) {
       setState(() => _currentStep--);
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
       );
     }
   }
@@ -158,10 +170,9 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
     final data = ref.read(addPlantDataProvider);
     if (!data.isReadyToCreate) {
       if (mounted) {
-        // mounted check
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Bitte fülle alle Pflichtfelder aus.'),
+            content: const Text('Bitte fülle alle Pflichtfelder (*) aus.'),
             backgroundColor: AppColors.errorColor,
           ),
         );
@@ -180,8 +191,7 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         breeder: data.breeder,
         seedDate: data.seedDate,
         germinationDate: data.germinationDate,
-        documentationStartDate:
-            data.effectiveDocumentationDate, // Verwende das effektive Datum
+        documentationStartDate: data.effectiveDocumentationDate,
         medium: data.medium!,
         location: data.location!,
         initialStatus: data.initialStatus!,
@@ -197,25 +207,22 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             backgroundColor: AppColors.successColor,
           ),
         );
-        ref.read(addPlantDataProvider.notifier).state =
-            AddPlantData(); // Reset data
+        ref.read(addPlantDataProvider.notifier).state = AddPlantData();
         context.goNamed('dashboard');
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                  'Pflanze konnte nicht erstellt werden. Details siehe Konsole.'),
-              backgroundColor: AppColors.errorColor,
-            ),
-          );
-        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'Pflanze konnte nicht erstellt werden. Überprüfe die Daten.'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Erstellen der Pflanze: ${e.toString()}'),
+            content: Text('Fehler: ${e.toString()}'),
             backgroundColor: AppColors.errorColor,
           ),
         );
@@ -234,9 +241,9 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         return data.isBasicInfoComplete;
       case 1:
         return data.isCultivationComplete;
-      case 2:
-        return true; // Fotoseite kann immer übersprungen werden
-      case 3:
+      case 2: // Foto-Seite
+        return true; // Kann immer übersprungen werden
+      case 3: // Bestätigungsseite
         return data.isReadyToCreate;
       default:
         return false;
@@ -245,62 +252,98 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   @override
   Widget build(BuildContext context) {
+    // Die Variable 'data' wird hier nicht mehr benötigt, da _canProceed()
+    // den Provider direkt überwacht.
+
+    // Umrechnung von Opacity (0.0 - 1.0) zu Alpha (0 - 255)
+    final int footerBoxShadowAlpha = (0.2 * 255).round();
+    final int primaryColorBorderAlpha = (0.5 * 255).round();
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey.shade50, // Heller Hintergrund für den Body
       appBar: AppBar(
         title: Text(
           'Neue Pflanze (${_currentStep + 1}/${_stepTitles.length})',
-          style: const TextStyle(color: Colors.white),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
+        elevation: 2,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close_rounded),
           onPressed: () {
-            ref.read(addPlantDataProvider.notifier).state =
-                AddPlantData(); // Reset data
-            context.goNamed('dashboard');
+            // Dialog anzeigen, ob der Benutzer wirklich abbrechen möchte
+            showDialog(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Erstellung abbrechen?'),
+                content: const Text(
+                    'Möchtest du das Erstellen der Pflanze wirklich abbrechen? Deine bisherigen Eingaben gehen verloren.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('Weiter bearbeiten'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(); // Dialog schließen
+                      ref.read(addPlantDataProvider.notifier).state =
+                          AddPlantData();
+                      context.goNamed('dashboard');
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.errorColor),
+                    child: const Text('Abbrechen & Verwerfen'),
+                  ),
+                ],
+              ),
+            );
           },
         ),
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _stepTitles[_currentStep],
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                LinearProgressIndicator(
-                  value: (_currentStep + 1) / _stepTitles.length,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.primaryColor),
-                ),
-              ],
+          Material(
+            // Material für den Schatten
+            elevation: 1, // Leichter Schatten unter dem Header
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              color: Colors.white, // Weißer Hintergrund für den Header-Bereich
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _stepTitles[_currentStep],
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textColor,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: (_currentStep + 1) / _stepTitles.length,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryColor),
+                    minHeight: 6, // Etwas dickerer Fortschrittsbalken
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics:
-                  const NeverScrollableScrollPhysics(), // Deaktiviert Swipe-Navigation
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) {
+                // Wird nicht direkt genutzt wegen NeverScrollableScrollPhysics,
+                // aber gut für zukünftige Änderungen.
+                setState(() {
+                  _currentStep = index;
+                });
+              },
               children: const [
                 BasicInfoStep(),
                 CultivationDetailsStep(),
@@ -310,14 +353,17 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(16),
+            // Footer für Buttons
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(51),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
+                  color: Colors.grey.withAlpha(
+                      footerBoxShadowAlpha), // Verwendung der Alpha-Variable
+                  spreadRadius: 0,
+                  blurRadius: 10,
+                  offset: const Offset(0, -3),
                 ),
               ],
             ),
@@ -325,48 +371,60 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
               children: [
                 if (_currentStep > 0)
                   Expanded(
-                    child: OutlinedButton(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18),
+                      label: const Text('Zurück'),
                       onPressed: _previousStep,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: Colors.grey.shade300),
-                        foregroundColor: Colors.grey.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: AppColors.primaryColor,
+                        side: BorderSide(
+                            color: AppColors.primaryColor.withAlpha(
+                                primaryColorBorderAlpha)), // Verwendung der Alpha-Variable
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: const Text('Zurück'),
                     ),
                   ),
                 if (_currentStep > 0) const SizedBox(width: 16),
                 Expanded(
-                  flex: _currentStep == 0
-                      ? 1
-                      : 1, // Button gleich breit machen, wenn nur einer da ist
-                  child: ElevatedButton(
-                    onPressed: _canProceed()
-                        ? (_currentStep == _stepTitles.length - 1
-                            ? _createPlant // Auf der letzten Seite wird erstellt
-                            : _nextStep) // Sonst zum nächsten Schritt
-                        : null, // Deaktiviert, wenn _canProceed false ist
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      disabledBackgroundColor: Colors.grey.shade300,
-                    ),
-                    child: _isCreating
+                  child: ElevatedButton.icon(
+                    icon: _isCreating
+                        ? Container()
+                        : Icon(
+                            _currentStep == _stepTitles.length - 1
+                                ? Icons.check_circle_outline_rounded
+                                : Icons.arrow_forward_ios_rounded,
+                            size: 18),
+                    label: _isCreating
                         ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 2,
+                              strokeWidth: 2.5,
                             ),
                           )
                         : Text(
                             _currentStep == _stepTitles.length - 1
                                 ? 'Pflanze erstellen'
                                 : 'Weiter',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
+                    onPressed: _canProceed() && !_isCreating
+                        ? (_currentStep == _stepTitles.length - 1
+                            ? _createPlant
+                            : _nextStep)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        disabledBackgroundColor: Colors.grey.shade300,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        textStyle: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
               ],
