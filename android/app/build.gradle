@@ -3,17 +3,25 @@
 // === WICHTIG: Passe diese Werte an dein Projekt an! ===
 // Diese Werte sollten mit denen übereinstimmen, die Flutter für dein Projekt verwendet
 // (siehe flutter.compileSdkVersion, flutter.minSdkVersion, flutter.targetSdkVersion in deiner android/app/build.gradle.kts).
-def resolvedCompileSdkVersion = 34 // BEISPIEL: Ersetze 34 mit dem tatsächlichen Wert von flutter.compileSdkVersion
-def resolvedMinSdkVersion = 21     // BEISPIEL: Ersetze dies mit deinem flutter.minSdkVersion
-def resolvedTargetSdkVersion = 34  // BEISPIEL: Ersetze dies mit deinem flutter.targetSdkVersion
+// Es wird empfohlen, diese Werte dynamisch aus den Flutter-Einstellungen zu beziehen, falls möglich,
+// aber für den Moment stellen wir sicher, dass sie mit den App-Level-Einstellungen übereinstimmen.
+// Deine app/build.gradle.kts verwendet flutter.compileSdkVersion, was typischerweise 34 ist für aktuelle Flutter-Versionen.
+def resolvedCompileSdkVersion = 34 // Stellt sicher, dass dies mit flutter.compileSdkVersion übereinstimmt
+def resolvedMinSdkVersion = 21     // Stellt sicher, dass dies mit flutter.minSdkVersion übereinstimmt (aus app/build.gradle.kts)
+def resolvedTargetSdkVersion = 34  // Stellt sicher, dass dies mit flutter.targetSdkVersion übereinstimmt (aus app/build.gradle.kts)
 // =======================================================
 
 buildscript {
     // Hole Versionen aus gradle.properties, falls vorhanden, sonst nutze sinnvolle Standardwerte.
-    // Die flutter.kotlinVersion aus deinen gradle.properties ist 1.7.10, was recht alt ist.
-    // Ein Update könnte hier langfristig sinnvoll sein, aber wir nutzen erstmal, was da ist.
-    ext.kotlin_version = project.properties.get('flutter.kotlinVersion', '1.7.10')
-    def androidGradlePluginVersion = project.properties.get('flutter.androidGradlePluginVersion', '7.3.0')
+    // Die flutter.kotlinVersion aus deinen gradle.properties ist 1.7.10.
+    // Die Gradle-Version ist 8.7 (aus gradle-wrapper.properties), welche neuere Kotlin-Versionen unterstützt.
+    // Wir verwenden hier die Kotlin-Version, die Flutter typischerweise mit Gradle 8.x verwendet,
+    // oder lassen es Flutter über 'flutter.kotlinVersion' in gradle.properties bestimmen.
+    // Es ist wichtig, dass die Kotlin-Version kompatibel mit dem Android Gradle Plugin und Gradle selbst ist.
+    // Für AGP 7.3.0 und Gradle 8.x ist eine Kotlin-Version >= 1.8.x oft besser.
+    // Wenn flutter.kotlinVersion in gradle.properties spezifisch gesetzt ist, wird dieser Wert genommen.
+    ext.kotlin_version = project.properties.get('flutter.kotlinVersion', '1.9.20') // Aktuelleren Standardwert verwenden, falls nicht in gradle.properties
+    def androidGradlePluginVersion = project.properties.get('flutter.androidGradlePluginVersion', '7.3.0') // Dieser Wert ist relativ alt für Gradle 8.x
 
     repositories {
         google()
@@ -46,17 +54,17 @@ subprojects {
                     targetSdkVersion resolvedTargetSdkVersion
                 }
 
-                // Stelle Java-Version Kompatibilität sicher
+                // Stelle Java-Version Kompatibilität sicher (Angleichung an app/build.gradle.kts)
                 compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_1_8
-                    targetCompatibility JavaVersion.VERSION_1_8
+                    sourceCompatibility JavaVersion.VERSION_1_11 // GEÄNDERT
+                    targetCompatibility JavaVersion.VERSION_1_11 // GEÄNDERT
                 }
 
-                // Für Kotlin-basierte Projekte/Plugins
+                // Für Kotlin-basierte Projekte/Plugins (Angleichung an app/build.gradle.kts)
                 if (project.plugins.hasPlugin('kotlin-android') || project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
                     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
                         kotlinOptions {
-                            jvmTarget = '1.8'
+                            jvmTarget = '11' // GEÄNDERT
                         }
                     }
                 }
@@ -71,7 +79,7 @@ rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
-subprojects {q
+subprojects { // Tippfehler 'q' entfernt
     project.evaluationDependsOn(':app')
 }
 
