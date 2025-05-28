@@ -1,7 +1,7 @@
 // lib/data/repositories/plant_repository.dart
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Sicherstellen, dass dieser Import da ist
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/plant.dart';
@@ -11,8 +11,54 @@ import '../services/supabase_service.dart';
 class PlantRepository {
   final _supabase = SupabaseService.client;
 
+  /// Stellt sicher, dass ein Profil für den aktuellen Benutzer existiert
+  Future<void> _ensureProfileExists() async {
+    final userId = SupabaseService.currentUserId;
+    final userEmail = SupabaseService.currentUserEmail;
+
+    if (userId == null) {
+      throw Exception('Benutzer nicht authentifiziert');
+    }
+
+    try {
+      // Prüfe ob Profil bereits existiert
+      final existingProfile = await _supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (existingProfile == null) {
+        debugPrint(
+            'Profil nicht gefunden für User ID: $userId. Erstelle automatisch...');
+
+        // Erstelle automatisch ein Profil
+        final username = userEmail != null
+            ? userEmail.split('@')[0]
+            : 'Benutzer${DateTime.now().millisecondsSinceEpoch}';
+
+        await _supabase.from('profiles').insert({
+          'id': userId,
+          'username': username,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        debugPrint('Profil erfolgreich erstellt für: $username');
+      } else {
+        debugPrint('Profil existiert bereits für User ID: $userId');
+      }
+    } catch (e) {
+      debugPrint('Fehler beim Überprüfen/Erstellen des Profils: $e');
+      rethrow;
+    }
+  }
+
   Future<Plant> createPlant(Plant plant) async {
     try {
+      // Stelle sicher, dass ein Profil existiert
+      await _ensureProfileExists();
+
       final response = await _supabase
           .from('plants')
           .insert(plant.toJson())
@@ -21,12 +67,35 @@ class PlantRepository {
       return Plant.fromJson(response);
     } catch (e) {
       debugPrint('Error creating plant in repository: $e');
+
+      // Spezielle Behandlung für Foreign Key Constraint Fehler
+      if (e.toString().contains('plants_user_id_fkey')) {
+        debugPrint(
+            'Foreign Key Constraint Fehler - Versuche Profil erneut zu erstellen...');
+        await _ensureProfileExists();
+
+        // Erneuter Versuch
+        try {
+          final response = await _supabase
+              .from('plants')
+              .insert(plant.toJson())
+              .select()
+              .single();
+          return Plant.fromJson(response);
+        } catch (retryError) {
+          debugPrint('Erneuter Versuch fehlgeschlagen: $retryError');
+          rethrow;
+        }
+      }
       rethrow;
     }
   }
 
   Future<Plant> updatePlant(Plant plant) async {
     try {
+      // Stelle sicher, dass ein Profil existiert
+      await _ensureProfileExists();
+
       final response = await _supabase
           .from('plants')
           .update(plant.toJson())
@@ -50,10 +119,7 @@ class PlantRepository {
       final storagePath = '$userId/$plantId/$uniqueFileName';
 
       await _supabase.storage.from('plant-photos').upload(storagePath, file,
-          fileOptions: const FileOptions(
-              // const hinzugefügt
-              cacheControl: '3600',
-              upsert: false));
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: false));
 
       final publicUrl =
           _supabase.storage.from('plant-photos').getPublicUrl(storagePath);
@@ -68,8 +134,12 @@ class PlantRepository {
 
   Future<List<Plant>> getAllPlants() async {
     try {
+      // Stelle sicher, dass ein Profil existiert
+      await _ensureProfileExists();
+
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
+
       final response = await _supabase
           .from('plants')
           .select()
@@ -86,8 +156,12 @@ class PlantRepository {
 
   Future<Plant?> getPlantById(String plantId) async {
     try {
+      // Stelle sicher, dass ein Profil existiert
+      await _ensureProfileExists();
+
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
+
       final response = await _supabase
           .from('plants')
           .select()
@@ -118,8 +192,11 @@ class PlantRepository {
 
   Future<List<Plant>> getPlantsByStatus(PlantStatus status) async {
     try {
+      await _ensureProfileExists();
+
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
+
       final response = await _supabase
           .from('plants')
           .select()
@@ -137,8 +214,11 @@ class PlantRepository {
 
   Future<List<Plant>> getPlantsByType(PlantType type) async {
     try {
+      await _ensureProfileExists();
+
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
+
       final response = await _supabase
           .from('plants')
           .select()
@@ -186,8 +266,11 @@ class PlantRepository {
 
   Future<Map<PlantStatus, int>> getPlantCountsByStatus() async {
     try {
+      await _ensureProfileExists();
+
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
+
       final plants = await getAllPlants();
       final counts = <PlantStatus, int>{};
       for (final status in PlantStatus.values) {
