@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart'; // FIXED: Missing import
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
@@ -534,7 +535,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               title: const Text('Kamera'),
               onTap: () {
                 Navigator.pop(context);
-                _uploadAvatar(ImageSource.camera);
+                _uploadAvatar(ImageSource.camera); // FIXED: Now accessible
               },
             ),
             ListTile(
@@ -542,7 +543,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               title: const Text('Galerie'),
               onTap: () {
                 Navigator.pop(context);
-                _uploadAvatar(ImageSource.gallery);
+                _uploadAvatar(ImageSource.gallery); // FIXED: Now accessible
               },
             ),
           ],
@@ -552,6 +553,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _uploadAvatar(ImageSource source) async {
+    // FIXED: Parameter type now available
     final controller = ref.read(profileControllerProvider.notifier);
     final success = await controller.uploadAvatar(source);
 

@@ -296,27 +296,30 @@ class ProfileRepository {
     return newAchievements;
   }
 
-  /// Lädt globale User-Rankings (für Social Proof)
+  /// Lädt globale User-Rankings (für Social Proof) - FIXED
   Future<Map<String, dynamic>> getUserRanking(String userId) async {
     try {
-      // Gesamtanzahl User
-      final totalUsersResponse = await _supabase
+      // Gesamtanzahl User - MODERNE SUPABASE API
+      final totalUsersQuery = await _supabase
           .from('profiles')
-          .select('id', const FetchOptions(count: CountOption.exact));
+          .select('id')
+          .count(CountOption.exact);
 
-      final totalUsers = totalUsersResponse.count ?? 1;
+      final totalUsers = totalUsersQuery.count;
 
       // User's Rank basierend auf Experience
       final userProfile = await getCurrentUserProfile();
       if (userProfile == null) return {};
 
-      final higherExpUsersResponse = await _supabase
+      final higherExpUsersQuery = await _supabase
           .from('profiles')
-          .select('id', const FetchOptions(count: CountOption.exact))
-          .gt('experience', userProfile.experience);
+          .select('id')
+          .gt('experience', userProfile.experience)
+          .count(CountOption.exact);
 
-      final rank = (higherExpUsersResponse.count ?? 0) + 1;
-      final percentile = ((totalUsers - rank) / totalUsers * 100).round();
+      final rank = higherExpUsersQuery.count + 1;
+      final percentile =
+          totalUsers > 0 ? ((totalUsers - rank) / totalUsers * 100).round() : 0;
 
       return {
         'rank': rank,
