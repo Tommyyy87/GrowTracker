@@ -1,5 +1,4 @@
 // lib/features/settings/controllers/settings_controller.dart
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -129,10 +128,7 @@ class SettingsController extends StateNotifier<AppSettings> {
       final settingsJson = prefs.getString(_settingsKey);
 
       if (settingsJson != null) {
-        final Map<String, dynamic> json = {};
-        // Vereinfachte JSON-Parsing (würde normalerweise dart:convert verwenden)
-        // Hier implementieren wir eine manuelle Lösung für die wichtigsten Werte
-
+        // FIXED: Entfernt unused variable 'json'
         state = AppSettings(
           themeMode: ThemeMode
               .values[prefs.getInt('themeMode') ?? ThemeMode.system.index],

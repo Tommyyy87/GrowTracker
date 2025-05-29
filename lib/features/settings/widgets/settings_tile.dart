@@ -93,7 +93,7 @@ class SettingsTile extends StatelessWidget {
       case SettingsTileType.navigation:
       case SettingsTileType.multiChoice:
       case SettingsTileType.simple:
-      default:
+        // FIXED: Entfernt unreachable default case
         return _buildBasicTile(
           theme,
           titleColor,
@@ -308,7 +308,8 @@ class SettingsTile extends StatelessWidget {
         }
         return null;
 
-      default:
+      case SettingsTileType.switchTile:
+      case SettingsTileType.slider:
         return null;
     }
   }

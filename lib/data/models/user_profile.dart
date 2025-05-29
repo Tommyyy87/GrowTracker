@@ -1,5 +1,4 @@
 // lib/data/models/user_profile.dart
-import 'package:uuid/uuid.dart';
 
 class UserProfile {
   final String id;

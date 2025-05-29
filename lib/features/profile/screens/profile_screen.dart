@@ -277,7 +277,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Text(
               message,
               style: TextStyle(
-                color: color.shade700,
+                color: color.withValues(
+                    alpha: 0.8), // FIXED: Ersetzt shade700 mit withValues
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
