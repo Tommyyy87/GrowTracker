@@ -31,22 +31,16 @@ class CurrentGrowsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Header
+        // IMPROVED: Cleaner Section Header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withAlpha(51), // 0.2 * 255
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.eco_rounded,
-                  color: AppColors.primaryColor,
-                  size: 20,
-                ),
+              // Icon und Text
+              Icon(
+                Icons.eco_rounded,
+                color: AppColors.primaryColor,
+                size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -55,13 +49,14 @@ class CurrentGrowsSection extends StatelessWidget {
                   children: [
                     Text(
                       'Aktuelle Grows',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
                           ),
                     ),
                     Text(
-                      '${activePlants.length} aktive Pflanze${activePlants.length == 1 ? '' : 'n'}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      '${activePlants.length} aktive${activePlants.length == 1 ? '' : ''} Pflanze${activePlants.length == 1 ? '' : 'n'}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.grey.shade600,
                           ),
                     ),
@@ -69,11 +64,18 @@ class CurrentGrowsSection extends StatelessWidget {
                 ),
               ),
 
-              // View Toggle Buttons
+              // IMPROVED: Better View Toggle
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -114,15 +116,15 @@ class CurrentGrowsSection extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           color: isSelected ? Colors.white : Colors.grey.shade600,
-          size: 18,
+          size: 20,
         ),
       ),
     );
@@ -202,7 +204,7 @@ class CurrentGrowsSection extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
+            childAspectRatio: 0.9, // Slightly taller for better proportions
           ),
           itemCount: plants.length,
           itemBuilder: (context, index) {
@@ -241,18 +243,18 @@ class _PlantGridCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(13), // 0.05 * 255
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Plant Image
+            // IMPROVED: Plant Image with better aspect ratio
             Container(
-              height: 100,
+              height: 110,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
@@ -261,19 +263,46 @@ class _PlantGridCard extends StatelessWidget {
                   topRight: Radius.circular(16),
                 ),
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                child: _buildPlantImage(),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                    child: _buildPlantImage(),
+                  ),
+                  // Status Badge
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        plant.status.displayName,
+                        style: TextStyle(
+                          color: Color(int.parse(plant.statusColor.substring(1),
+                                  radix: 16) +
+                              0xFF000000),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // Plant Info
+            // IMPROVED: Plant Info with better spacing
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -282,7 +311,8 @@ class _PlantGridCard extends StatelessWidget {
                       plant.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 15,
+                        color: Colors.black87,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -303,42 +333,23 @@ class _PlantGridCard extends StatelessWidget {
 
                     const Spacer(),
 
-                    // Status and Health Indicator
+                    // Health Status Row
                     Row(
                       children: [
+                        _buildHealthIndicator(),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Color(int.parse(
-                                          plant.statusColor.substring(1),
-                                          radix: 16) +
-                                      0xFF000000)
-                                  .withAlpha(51), // 0.2 * 255
-                              borderRadius: BorderRadius.circular(8),
+                          child: Text(
+                            _getHealthText(),
+                            style: TextStyle(
+                              color: _getHealthColor(),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
                             ),
-                            child: Text(
-                              plant.status.displayName,
-                              style: TextStyle(
-                                color: Color(int.parse(
-                                        plant.statusColor.substring(1),
-                                        radix: 16) +
-                                    0xFF000000),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-
-                        const SizedBox(width: 8),
-
-                        // Health Indicator
-                        _buildHealthIndicator(),
                       ],
                     ),
                   ],
@@ -356,12 +367,16 @@ class _PlantGridCard extends StatelessWidget {
       return Image.network(
         plant.photoUrl!,
         fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
         errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
       );
     } else if (plant.photoUrl != null && File(plant.photoUrl!).existsSync()) {
       return Image.file(
         File(plant.photoUrl!),
         fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
         errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
       );
     } else {
@@ -371,46 +386,63 @@ class _PlantGridCard extends StatelessWidget {
 
   Widget _buildPlaceholderImage() {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       color: Colors.grey.shade200,
       child: Center(
         child: Icon(
           Icons.eco_rounded,
           color: Colors.grey.shade400,
-          size: 32,
+          size: 40,
         ),
       ),
     );
   }
 
   Widget _buildHealthIndicator() {
-    Color healthColor;
-    IconData healthIcon;
-
-    // Simple health logic based on status and age
-    if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
-      healthColor = Colors.red;
-      healthIcon = Icons.error;
-    } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
-      healthColor = Colors.orange;
-      healthIcon = Icons.schedule;
-    } else {
-      healthColor = Colors.green;
-      healthIcon = Icons.check_circle;
-    }
-
     return Container(
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: healthColor.withAlpha(51), // 0.2 * 255
+        color: _getHealthColor().withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(
-        healthIcon,
-        color: healthColor,
+        _getHealthIcon(),
+        color: _getHealthColor(),
         size: 12,
       ),
     );
+  }
+
+  Color _getHealthColor() {
+    if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
+      return Colors.red.shade600;
+    } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
+      return Colors.orange.shade600;
+    } else {
+      return Colors.green.shade600;
+    }
+  }
+
+  IconData _getHealthIcon() {
+    if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
+      return Icons.error;
+    } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
+      return Icons.schedule;
+    } else {
+      return Icons.check_circle;
+    }
+  }
+
+  String _getHealthText() {
+    if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
+      return 'Überfällig';
+    } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
+      return 'Bald erntereif';
+    } else {
+      return 'Gesund';
+    }
   }
 }
 
@@ -431,7 +463,7 @@ class _PlantListCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(13), // 0.05 * 255
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -487,7 +519,7 @@ class _PlantListCard extends StatelessWidget {
                           color: Color(int.parse(plant.statusColor.substring(1),
                                       radix: 16) +
                                   0xFF000000)
-                              .withAlpha(51), // 0.2 * 255
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -527,7 +559,19 @@ class _PlantListCard extends StatelessWidget {
             // Health Indicator & Arrow
             Column(
               children: [
-                _buildHealthIndicator(),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: _getHealthColor().withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getHealthIcon(),
+                    color: _getHealthColor(),
+                    size: 14,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Icon(
                   Icons.arrow_forward_ios,
@@ -573,33 +617,23 @@ class _PlantListCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHealthIndicator() {
-    Color healthColor;
-    IconData healthIcon;
-
+  Color _getHealthColor() {
     if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
-      healthColor = Colors.red;
-      healthIcon = Icons.error;
+      return Colors.red.shade600;
     } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
-      healthColor = Colors.orange;
-      healthIcon = Icons.schedule;
+      return Colors.orange.shade600;
     } else {
-      healthColor = Colors.green;
-      healthIcon = Icons.check_circle;
+      return Colors.green.shade600;
     }
+  }
 
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: healthColor.withAlpha(51), // 0.2 * 255
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        healthIcon,
-        color: healthColor,
-        size: 14,
-      ),
-    );
+  IconData _getHealthIcon() {
+    if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
+      return Icons.error;
+    } else if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7) {
+      return Icons.schedule;
+    } else {
+      return Icons.check_circle;
+    }
   }
 }

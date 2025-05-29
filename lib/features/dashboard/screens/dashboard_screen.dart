@@ -37,14 +37,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         },
         child: CustomScrollView(
           slivers: [
-            // Modern App Bar
+            // FIXED: App Bar mit korrekter Höhe
             SliverAppBar(
-              expandedHeight: 120,
+              expandedHeight: 160, // Reduced from 120 to prevent overflow
               floating: true,
               snap: true,
               backgroundColor: AppColors.primaryColor,
               foregroundColor: Colors.white,
               elevation: 0,
+              automaticallyImplyLeading: false, // Remove back button
               actions: [
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
@@ -125,21 +126,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               data: (plants) {
                 return SliverList(
                   delegate: SliverChildListDelegate([
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    // Attention Cards - Pflanzen die Aufmerksamkeit brauchen
-                    AttentionCards(plants: plants),
-
-                    const SizedBox(height: 16),
-
-                    // Erweiterte Statistiken
+                    // Statistiken - Jetzt viel übersichtlicher
                     statsAsync.when(
                       data: (stats) => DashboardStats(stats: stats),
                       loading: () => const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16.0),
                         child: Card(
                           child: Padding(
-                            padding: EdgeInsets.all(32.0),
+                            padding: EdgeInsets.all(24.0),
                             child: Center(child: CircularProgressIndicator()),
                           ),
                         ),
@@ -149,18 +145,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Current Grows Section
-                    CurrentGrowsSection(
-                      plants: plants,
-                      isGridView: _isGridView,
-                      onViewToggle: () =>
-                          setState(() => _isGridView = !_isGridView),
-                    ),
+                    // Attention Cards - Nur wenn nötig
+                    AttentionCards(plants: plants),
 
                     const SizedBox(height: 24),
 
-                    // Recent Activity
-                    const RecentActivitySection(),
+                    // IMPROVED: Current Grows Section mit besserer Darstellung
+                    if (plants.isNotEmpty) ...[
+                      CurrentGrowsSection(
+                        plants: plants,
+                        isGridView: _isGridView,
+                        onViewToggle: () =>
+                            setState(() => _isGridView = !_isGridView),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // IMPROVED: Empty State wenn keine Pflanzen
+                    if (plants.isEmpty) ...[
+                      _buildEmptyDashboard(context),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Recent Activity - Nur wenn Pflanzen vorhanden
+                    if (plants.isNotEmpty) ...[
+                      const RecentActivitySection(),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Bottom Padding für FAB
                     const SizedBox(height: 100),
@@ -199,7 +210,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        error.toString(),
+                        'Bitte versuche es erneut.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
@@ -218,9 +229,147 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
 
-      // Expandierbare FAB mit Quick Actions
+      // FIXED: FAB mit korrektem Background
       floatingActionButton: const QuickActionsFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  // NEW: Verbesserter Empty State
+  Widget _buildEmptyDashboard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(40),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Illustration
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.eco_rounded,
+                    size: 50,
+                    color: AppColors.primaryColor,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Title
+                Text(
+                  'Willkommen bei GrowTracker!',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Description
+                Text(
+                  'Beginne jetzt mit der Dokumentation deiner ersten Pflanze und verfolge jeden Schritt deines Grows.',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 32),
+
+                // CTA Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.goNamed('add_plant'),
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Erste Pflanze hinzufügen'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Quick Tips Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline,
+                      color: Colors.blue.shade600,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Quick Tipp',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Mit GrowTracker kannst du alle Pflanzenarten verwalten - von Cannabis über Tomaten bis hin zu Zimmerpflanzen. Jede Pflanze erhält automatisch eine eindeutige ID und einen QR-Code.',
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

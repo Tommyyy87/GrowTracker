@@ -31,26 +31,27 @@ class DashboardHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plantsAsync = ref.watch(plantsProvider);
-    final statsAsync = ref.watch(plantStatsProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+    return Container(
+      // Fix: Explizite Höhe setzen um Overflow zu vermeiden
+      height: 140,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 60), // AppBar spacing
-
-          // Greeting Section
+          // Vereinfachter Header ohne komplexe Statistiken
           Row(
             children: [
+              // Avatar
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(51), // 0.2 * 255
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.white.withAlpha(77), // 0.3 * 255
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -60,7 +61,10 @@ class DashboardHeader extends ConsumerWidget {
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+
+              const SizedBox(width: 16),
+
+              // Greeting und Status
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,16 +73,16 @@ class DashboardHeader extends ConsumerWidget {
                       '${_getGreeting()}, ${_getUserDisplayName()}!',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 4),
                     plantsAsync.when(
                       data: (plants) {
                         final activePlants = plants
-                            .where(
-                                (p) => p.status.index < 5 // Nicht abgeschlossen
-                                )
+                            .where((p) =>
+                                p.status.index < 6) // Nicht abgeschlossen
                             .length;
 
                         if (plants.isEmpty) {
@@ -92,7 +96,7 @@ class DashboardHeader extends ConsumerWidget {
                         }
 
                         return Text(
-                          '$activePlants aktive${activePlants == 1 ? '' : ''} Grow${activePlants == 1 ? '' : 's'}',
+                          '$activePlants aktive Pflanze${activePlants == 1 ? '' : 'n'}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 14,
@@ -117,101 +121,63 @@ class DashboardHeader extends ConsumerWidget {
                   ],
                 ),
               ),
-
-              // Quick Alert Indicator
-              statsAsync.when(
-                data: (stats) {
-                  final harvestReady = stats['harvestReady'] ?? 0;
-                  final overdue = stats['overdue'] ?? 0;
-                  final alertCount = harvestReady + overdue;
-
-                  if (alertCount > 0) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: alertCount > 2
-                            ? Colors.red.shade400
-                            : Colors.orange.shade400,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            alertCount > 2
-                                ? Icons.priority_high
-                                : Icons.schedule,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$alertCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // Quick Insights Bar
+          // Vereinfachte Quick-Info Bar
           plantsAsync.when(
             data: (plants) {
               if (plants.isEmpty) return const SizedBox.shrink();
 
-              final totalAge =
-                  plants.fold<int>(0, (sum, plant) => sum + plant.ageInDays);
-              final avgAge = totalAge / plants.length;
-              final oldestPlant =
-                  plants.reduce((a, b) => a.ageInDays > b.ageInDays ? a : b);
+              final needsAttention = plants.where((plant) {
+                return (plant.daysUntilHarvest != null &&
+                        plant.daysUntilHarvest! <= 7) ||
+                    (plant.daysUntilHarvest != null &&
+                        plant.daysUntilHarvest! < 0);
+              }).length;
 
               return Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(26), // 0.1 * 255
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withAlpha(51), // 0.2 * 255
+                    color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
                   children: [
+                    Icon(
+                      needsAttention > 0
+                          ? Icons.priority_high
+                          : Icons.check_circle,
+                      color: needsAttention > 0
+                          ? Colors.orange.shade200
+                          : Colors.green.shade200,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: _buildQuickStat(
-                        'Ø Alter',
-                        '${avgAge.round()} Tage',
-                        Icons.schedule_outlined,
+                      child: Text(
+                        needsAttention > 0
+                            ? '$needsAttention Pflanze${needsAttention == 1 ? '' : 'n'} braucht${needsAttention == 1 ? '' : 'en'} Aufmerksamkeit'
+                            : 'Alle Pflanzen sind in Ordnung',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    Container(
-                      height: 20,
-                      width: 1,
-                      color: Colors.white.withAlpha(77), // 0.3 * 255
-                    ),
-                    Expanded(
-                      child: _buildQuickStat(
-                        'Älteste',
-                        oldestPlant.name.length > 8
-                            ? '${oldestPlant.name.substring(0, 8)}...'
-                            : oldestPlant.name,
-                        Icons.eco_outlined,
+                    if (needsAttention > 0)
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        size: 14,
                       ),
-                    ),
                   ],
                 ),
               );
@@ -221,40 +187,6 @@ class DashboardHeader extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildQuickStat(String label, String value, IconData icon) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          color: Colors.white70,
-          size: 16,
-        ),
-        const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

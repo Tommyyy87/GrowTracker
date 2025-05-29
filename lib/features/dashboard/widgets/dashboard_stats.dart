@@ -25,28 +25,41 @@ class DashboardStats extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main Stats Row
+          // Titel
+          Text(
+            'Übersicht',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+          ),
+          const SizedBox(height: 12),
+
+          // Hauptstatistiken - Viel klarer beschriftet
           Row(
             children: [
               Expanded(
                 child: _buildMainStatCard(
+                  context: context,
                   title: 'Gesamt',
                   value: total.toString(),
-                  subtitle: 'Pflanzen',
+                  // FIXED: Removed unnecessary braces in string interpolation
+                  subtitle: total == 1 ? 'Pflanze' : 'Pflanzen',
                   icon: Icons.eco_rounded,
                   color: AppColors.primaryColor,
-                  trend: _calculateTrend(total),
+                  isEmpty: total == 0,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildMainStatCard(
+                  context: context,
                   title: 'Aktiv',
                   value: active.toString(),
-                  subtitle: 'in Arbeit',
+                  subtitle: 'laufende Grows',
                   icon: Icons.local_florist_rounded,
-                  color: Colors.green,
-                  progress: total > 0 ? active / total : 0.0,
+                  color: Colors.green.shade600,
+                  isEmpty: active == 0,
                 ),
               ),
             ],
@@ -54,35 +67,35 @@ class DashboardStats extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Secondary Stats Row
+          // Sekundäre Stats
           Row(
             children: [
               Expanded(
                 child: _buildSecondaryStatCard(
+                  context: context,
                   title: 'Abgeschlossen',
                   value: completed.toString(),
                   icon: Icons.check_circle_rounded,
-                  color: Colors.blue,
-                  progress: total > 0 ? completed / total : 0.0,
+                  color: Colors.blue.shade600,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildSecondaryStatCard(
-                  title: 'Ø Alter',
-                  value: averageAge > 0 ? '${averageAge}d' : '0d',
-                  icon: Icons.schedule_rounded,
-                  color: Colors.orange,
-                  showProgress: false,
+                  context: context,
+                  title: 'Durchschnittsalter',
+                  value: averageAge > 0 ? '$averageAge Tage' : 'Keine Daten',
+                  icon: Icons.calendar_today_rounded,
+                  color: Colors.orange.shade600,
                 ),
               ),
             ],
           ),
 
-          // Alert Stats (wenn vorhanden)
+          // Aufmerksamkeits-Card nur wenn nötig
           if (harvestReady > 0 || overdue > 0) ...[
             const SizedBox(height: 12),
-            _buildAlertStatsCard(harvestReady, overdue),
+            _buildAttentionCard(context, harvestReady, overdue),
           ],
         ],
       ),
@@ -90,55 +103,56 @@ class DashboardStats extends StatelessWidget {
   }
 
   Widget _buildMainStatCard({
+    required BuildContext context,
     required String title,
     required String value,
     required String subtitle,
     required IconData icon,
     required Color color,
-    double? progress,
-    String? trend,
+    bool isEmpty = false,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13), // 0.05 * 255
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Icon und Titel
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withAlpha(51), // 0.2 * 255
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
                   color: color,
-                  size: 20,
+                  size: 24,
                 ),
               ),
               const Spacer(),
-              if (trend != null)
+              if (!isEmpty)
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    trend,
+                    'Aktiv',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontSize: 10,
@@ -148,66 +162,62 @@ class DashboardStats extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 16),
+
+          // Hauptzahl
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
+            style: TextStyle(
+              fontSize: 32,
               fontWeight: FontWeight.bold,
+              color: isEmpty ? Colors.grey.shade400 : Colors.grey.shade800,
             ),
           ),
+
           const SizedBox(height: 4),
-          Row(
+
+          // Beschreibung
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
                 style: TextStyle(
                   color: Colors.grey.shade600,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 4),
               Text(
                 subtitle,
                 style: TextStyle(
                   color: Colors.grey.shade500,
-                  fontSize: 10,
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
-          if (progress != null) ...[
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ],
         ],
       ),
     );
   }
 
   Widget _buildSecondaryStatCard({
+    required BuildContext context,
     required String title,
     required String value,
     required IconData icon,
     required Color color,
-    double? progress,
-    bool showProgress = true,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13), // 0.05 * 255
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -221,56 +231,52 @@ class DashboardStats extends StatelessWidget {
               Icon(
                 icon,
                 color: color,
-                size: 16,
+                size: 20,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
                     color: Colors.grey.shade600,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
           ),
-          if (showProgress && progress != null) ...[
-            const SizedBox(height: 6),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 3,
-              borderRadius: BorderRadius.circular(1.5),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildAlertStatsCard(int harvestReady, int overdue) {
+  Widget _buildAttentionCard(
+      BuildContext context, int harvestReady, int overdue) {
+    final isUrgent = overdue > 0;
+    final alertColor = isUrgent ? Colors.red : Colors.orange;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: overdue > 0 ? Colors.red.shade200 : Colors.orange.shade200,
+          color: alertColor.shade200,
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13), // 0.05 * 255
+            color: alertColor.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -279,71 +285,44 @@ class DashboardStats extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: overdue > 0 ? Colors.red.shade100 : Colors.orange.shade100,
-              borderRadius: BorderRadius.circular(8),
+              color: alertColor.shade50,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              overdue > 0 ? Icons.error_outline : Icons.schedule,
-              color: overdue > 0 ? Colors.red.shade600 : Colors.orange.shade600,
-              size: 20,
+              isUrgent ? Icons.priority_high : Icons.schedule,
+              color: alertColor.shade600,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  overdue > 0
-                      ? 'Aufmerksamkeit erforderlich!'
-                      : 'Bald erntereif',
+                  isUrgent ? '⚠️ Dringend!' : '⏰ Bald erntereif',
                   style: TextStyle(
-                    color: overdue > 0
-                        ? Colors.red.shade700
-                        : Colors.orange.shade700,
-                    fontSize: 13,
+                    color: alertColor.shade700,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    if (overdue > 0) ...[
-                      Text(
-                        '$overdue überfällig',
-                        style: TextStyle(
-                          color: Colors.red.shade600,
-                          fontSize: 11,
-                        ),
-                      ),
-                      if (harvestReady > 0) ...[
-                        Text(
-                          ' • ',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ],
-                    if (harvestReady > 0)
-                      Text(
-                        '$harvestReady erntereif',
-                        style: TextStyle(
-                          color: Colors.orange.shade600,
-                          fontSize: 11,
-                        ),
-                      ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  _buildAttentionMessage(harvestReady, overdue),
+                  style: TextStyle(
+                    color: alertColor.shade600,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
           ),
           Icon(
             Icons.arrow_forward_ios,
-            color: Colors.grey.shade400,
+            color: alertColor.shade400,
             size: 16,
           ),
         ],
@@ -351,11 +330,13 @@ class DashboardStats extends StatelessWidget {
     );
   }
 
-  String? _calculateTrend(int total) {
-    // Placeholder für Trend-Berechnung
-    if (total > 0) {
-      return '+$total';
+  String _buildAttentionMessage(int harvestReady, int overdue) {
+    if (overdue > 0 && harvestReady > 0) {
+      return '$overdue überfällig, $harvestReady erntereif';
+    } else if (overdue > 0) {
+      return '$overdue Pflanze${overdue == 1 ? '' : 'n'} überfällig';
+    } else {
+      return '$harvestReady Pflanze${harvestReady == 1 ? '' : 'n'} erntereif';
     }
-    return null;
   }
 }
