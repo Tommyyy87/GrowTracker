@@ -9,6 +9,10 @@ import 'features/auth/screens/welcome_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/plants/screens/add_plant/add_plant_wizard.dart';
 import 'features/plants/screens/plant_detail_screen.dart';
+import 'features/profile/screens/profile_screen.dart';
+import 'features/profile/screens/edit_profile_screen.dart';
+import 'features/profile/screens/account_management_screen.dart';
+import 'features/settings/screens/settings_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -76,6 +80,30 @@ class AppRouter {
           final plantId = state.pathParameters['plantId']!;
           return PlantDetailScreen(plantId: plantId);
         },
+      ),
+
+      // Profile Routes
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        name: 'edit_profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/account',
+        name: 'account_management',
+        builder: (context, state) => const AccountManagementScreen(),
+      ),
+
+      // Settings Routes
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
 
       // Future Routes (commented out for now)

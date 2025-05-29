@@ -376,14 +376,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _handleMenuAction(String action) {
     switch (action) {
       case 'profile':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil-Feature kommt bald!')),
-        );
+        // FIXED: Navigate to profile screen instead of showing snackbar
+        context.goNamed('profile');
         break;
       case 'settings':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Einstellungen kommen bald!')),
-        );
+        // FIXED: Navigate to settings screen instead of showing snackbar
+        context.goNamed('settings');
         break;
       case 'export':
         ScaffoldMessenger.of(context).showSnackBar(
