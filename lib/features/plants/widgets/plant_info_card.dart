@@ -1,5 +1,5 @@
 // lib/features/plants/widgets/plant_info_card.dart
-import 'dart:io'; // Für File-Check
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../data/models/plant.dart';
 
@@ -27,7 +27,6 @@ class PlantInfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                // Foto der Pflanze oder Platzhalter
                 Container(
                   width: 60,
                   height: 60,
@@ -65,7 +64,7 @@ class PlantInfoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        plant.name, // Name statt Strain hier
+                        plant.name,
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -73,7 +72,7 @@ class PlantInfoCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (plant.strain.isNotEmpty) // Strain als Sub-Info
+                      if (plant.strain.isNotEmpty)
                         Text(
                           plant.strain,
                           style: TextStyle(
@@ -83,6 +82,30 @@ class PlantInfoCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                      // NEU: Anzeige des Besitzernamens, falls vorhanden
+                      if (plant.ownerName != null &&
+                          plant.ownerName!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.badge_outlined,
+                                  size: 12, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Text(
+                                plant.ownerName!,
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -90,18 +113,20 @@ class PlantInfoCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Color(int.parse(plant.statusColor.substring(1),
+                    color: Color(int.parse(
+                                plant.statusColor
+                                    .substring(1), // Korrigiert für Alpha
                                 radix: 16) +
                             0xFF000000)
-                        .withAlpha(51),
+                        .withAlpha(51), // 20% Opacity
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     plant.status.displayName,
                     style: TextStyle(
-                      color: Color(
-                          int.parse(plant.statusColor.substring(1), radix: 16) +
-                              0xFF000000),
+                      color: Color(int.parse(plant.statusColor.substring(1),
+                              radix: 16) + // Korrigiert für Alpha
+                          0xFF000000),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -224,7 +249,6 @@ class PlantInfoCard extends StatelessWidget {
                 _buildInfoRow(
                     'Alter', '${plant.ageInDays} Tage', Icons.schedule_rounded),
                 const SizedBox(height: 12),
-                // KORREKTUR HIER:
                 _buildInfoRow(
                     plant.primaryDateLabel,
                     _formatDate(plant.primaryDate),
@@ -235,8 +259,6 @@ class PlantInfoCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _buildInfoRow('Standort', plant.location.displayName,
                     Icons.location_on_rounded),
-
-                // KORREKTUR HIER (und Logik angepasst):
                 if (plant.seedDate != null &&
                     plant.seedDate != plant.primaryDate) ...[
                   const SizedBox(height: 12),

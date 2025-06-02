@@ -1,3 +1,4 @@
+// lib/routes.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import 'features/auth/screens/welcome_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/plants/screens/add_plant/add_plant_wizard.dart';
 import 'features/plants/screens/plant_detail_screen.dart';
+import 'features/plants/screens/qr_scanner_screen.dart'; // NEU: Import für QRScannerScreen
 import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/edit_profile_screen.dart';
 import 'features/profile/screens/account_management_screen.dart';
@@ -18,19 +20,16 @@ class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
     redirect: (BuildContext context, GoRouterState state) {
-      // Auth-Weiterleitungslogik
       final isLoggedIn = SupabaseService.isAuthenticated;
       final isAuthRoute = state.matchedLocation == '/' ||
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/auth/callback';
 
-      // Nach erfolgreicher Authentifizierung zum Dashboard
       if (isLoggedIn && isAuthRoute) {
         return '/dashboard';
       }
 
-      // Nicht authentifizierte Benutzer zu Welcome-Screen
       if (!isLoggedIn && !isAuthRoute) {
         return '/';
       }
@@ -81,6 +80,12 @@ class AppRouter {
           return PlantDetailScreen(plantId: plantId);
         },
       ),
+      GoRoute(
+        // NEUE ROUTE für den QR Scanner
+        path: '/qr-scanner',
+        name: 'qr_scanner',
+        builder: (context, state) => const QrScannerScreen(),
+      ),
 
       // Profile Routes
       GoRoute(
@@ -105,21 +110,6 @@ class AppRouter {
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
       ),
-
-      // Future Routes (commented out for now)
-      // GoRoute(
-      //   path: '/plants',
-      //   name: 'plants_overview',
-      //   builder: (context, state) => const PlantsOverviewScreen(),
-      // ),
-      // GoRoute(
-      //   path: '/plants/:plantId/edit',
-      //   name: 'edit_plant',
-      //   builder: (context, state) {
-      //     final plantId = state.pathParameters['plantId']!;
-      //     return EditPlantScreen(plantId: plantId);
-      //   },
-      // ),
     ],
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../../data/models/plant.dart'; // Für Enums PlantType, PlantStatus
-import '../../../widgets/selectable_choice_card.dart'; // Importiere das neue Widget
-import '../add_plant_wizard.dart'; // Stellt AddPlantData und Provider bereit
+import '../../../../../data/models/plant.dart';
+import '../../../widgets/selectable_choice_card.dart';
+import '../add_plant_wizard.dart';
 
 class BasicInfoStep extends ConsumerWidget {
   const BasicInfoStep({super.key});
@@ -26,7 +26,6 @@ class BasicInfoStep extends ConsumerWidget {
     }
   }
 
-  // Helper-Methode zum Erstellen der Label für die Kachel-Sektionen
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
@@ -40,18 +39,17 @@ class BasicInfoStep extends ConsumerWidget {
     );
   }
 
-  // Helper-Methode für die Icon-Auswahl (Beispiele)
   IconData _getPlantTypeIcon(PlantType type) {
     switch (type) {
       case PlantType.cannabis:
-        return Icons.local_florist_outlined; // Beispiel-Icon
+        return Icons.local_florist_outlined;
       case PlantType.tomato:
         return Icons
-            .set_meal_outlined; // Beispiel-Icon (Tomate nicht direkt da)
+            .set_meal_outlined; // flutter pub add flutter_icons oder spezifisches Icon
       case PlantType.chili:
-        return Icons.whatshot_outlined; // Beispiel-Icon
+        return Icons.whatshot_outlined;
       case PlantType.herbs:
-        return Icons.grass_outlined; // Beispiel-Icon
+        return Icons.grass_outlined;
       case PlantType.other:
         return Icons.question_mark_outlined;
     }
@@ -70,9 +68,9 @@ class BasicInfoStep extends ConsumerWidget {
       case PlantStatus.harvest:
         return Icons.agriculture_outlined;
       case PlantStatus.drying:
-        return Icons.wb_sunny_outlined; // Platzhalter, ggf. spezifischer
+        return Icons.wb_sunny_outlined;
       case PlantStatus.curing:
-        return Icons.inventory_2_outlined; // Platzhalter
+        return Icons.inventory_2_outlined;
       case PlantStatus.completed:
         return Icons.check_circle_outline;
     }
@@ -86,6 +84,7 @@ class BasicInfoStep extends ConsumerWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Form(
+        // Optional: GlobalKey<FormState>() hier, wenn du pro Step validieren willst
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -100,6 +99,19 @@ class BasicInfoStep extends ConsumerWidget {
               validator: (value) => (value == null || value.isEmpty)
                   ? 'Name ist erforderlich'
                   : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              // NEUES FELD FÜR BESITZERNAME
+              initialValue: data.ownerName,
+              decoration: const InputDecoration(
+                labelText: 'Besitzername (optional)',
+                prefixIcon: Icon(Icons.badge_outlined),
+              ),
+              onChanged: (value) => dataNotifier.update((state) =>
+                  state.copyWith(
+                      ownerName: value.isEmpty ? null : value,
+                      setOwnerNameNull: value.isEmpty)),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -126,16 +138,13 @@ class BasicInfoStep extends ConsumerWidget {
                       breeder: value.isEmpty ? null : value,
                       setBreederNull: value.isEmpty)),
             ),
-
-            // Pflanzenart Auswahl
             _buildSectionTitle(context, 'Pflanzenart*'),
             Wrap(
               spacing: 8.0,
               runSpacing: 8.0,
               children: PlantType.values.map((type) {
                 return SizedBox(
-                  width: (MediaQuery.of(context).size.width - 48 - 16) /
-                      3, // 3 Kacheln pro Reihe (ca.)
+                  width: (MediaQuery.of(context).size.width - 48 - 16) / 3,
                   child: SelectableChoiceCard<PlantType>(
                     value: type,
                     groupValue: data.plantType,
@@ -147,7 +156,7 @@ class BasicInfoStep extends ConsumerWidget {
                 );
               }).toList(),
             ),
-            if (data.plantType == null) // Validierungsnachricht
+            if (data.plantType == null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
@@ -156,22 +165,18 @@ class BasicInfoStep extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.error, fontSize: 12),
                 ),
               ),
-
-            // Aktueller Status Auswahl
             _buildSectionTitle(context, 'Aktueller Status*'),
             Wrap(
               spacing: 8.0,
               runSpacing: 8.0,
               children: PlantStatus.values.map((status) {
-                // Filter für Status, die nicht initial ausgewählt werden sollten (optional)
                 if (status == PlantStatus.drying ||
                     status == PlantStatus.curing ||
                     status == PlantStatus.completed) {
-                  return const SizedBox.shrink(); // Diese Status nicht anzeigen
+                  return const SizedBox.shrink();
                 }
                 return SizedBox(
-                  width: (MediaQuery.of(context).size.width - 48 - 8) /
-                      2, // 2 Kacheln pro Reihe (ca.)
+                  width: (MediaQuery.of(context).size.width - 48 - 8) / 2,
                   child: SelectableChoiceCard<PlantStatus>(
                     value: status,
                     groupValue: data.initialStatus,
@@ -186,7 +191,7 @@ class BasicInfoStep extends ConsumerWidget {
                 );
               }).toList(),
             ),
-            if (data.initialStatus == null) // Validierungsnachricht
+            if (data.initialStatus == null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
@@ -195,8 +200,6 @@ class BasicInfoStep extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.error, fontSize: 12),
                 ),
               ),
-
-            // Wichtige Daten
             _buildSectionTitle(context, 'Wichtige Daten (optional)'),
             ListTile(
               contentPadding: EdgeInsets.zero,

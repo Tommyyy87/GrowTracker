@@ -15,7 +15,7 @@ final plantRepositoryProvider = Provider<PlantRepository>((ref) {
 final plantsProvider = FutureProvider<List<Plant>>((ref) async {
   final repository = ref.read(plantRepositoryProvider);
   final plants = await repository.getAllPlants();
-  plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  // plants.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Bereits im Repo
   return plants;
 });
 
@@ -39,16 +39,18 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
     try {
       state = const AsyncValue.loading();
       final plants = await _repository.getAllPlants();
-      plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // plants.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Bereits im Repo
       state = AsyncValue.data(plants);
     } catch (error, stackTrace) {
-      debugPrint('Error loading plants in controller: $error');
+      // ignore: avoid_print
+      print('Error loading plants in controller: $error');
       state = AsyncValue.error(error, stackTrace);
     }
   }
 
   Future<Plant?> createPlant({
     required String name,
+    String? ownerName, // NEU
     required PlantType plantType,
     required String strain,
     String? breeder,
@@ -64,12 +66,14 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   }) async {
     final userId = SupabaseService.currentUserId;
     if (userId == null) {
-      debugPrint('Error creating plant: User not authenticated');
+      // ignore: avoid_print
+      print('Error creating plant: User not authenticated');
       throw Exception('User not authenticated');
     }
 
     Plant plantToCreate = Plant.create(
       name: name,
+      ownerName: ownerName, // NEU
       plantType: plantType,
       strain: strain,
       breeder: breeder,
@@ -81,39 +85,50 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       status: initialStatus,
       estimatedHarvestDays: estimatedHarvestDays,
       notes: notes,
-      photoUrl: null,
+      photoUrl: null, // Wird nach dem Hochladen gesetzt
       userId: userId,
     );
 
     try {
       Plant createdPlant = await _repository.createPlant(plantToCreate);
-      debugPrint('Plant record created with ID: ${createdPlant.id}');
+      // ignore: avoid_print
+      print('Plant record created with ID: ${createdPlant.id}');
 
       String? uploadedPhotoUrl;
       if (photoPath != null && photoPath.isNotEmpty) {
         try {
           uploadedPhotoUrl = await _repository.uploadPlantPhoto(
               userId, createdPlant.id, photoPath);
-          debugPrint('Photo uploaded, URL: $uploadedPhotoUrl');
+          // ignore: avoid_print
+          print('Photo uploaded, URL: $uploadedPhotoUrl');
         } catch (e) {
-          debugPrint('Error uploading photo during plant creation: $e');
+          // ignore: avoid_print
+          print('Error uploading photo during plant creation: $e');
+          // Hier könntest du entscheiden, ob der Fehler beim Foto-Upload kritisch ist
+          // oder ob die Pflanze trotzdem als erstellt gilt.
         }
       }
 
       if (uploadedPhotoUrl != null) {
+        // Die Plant-Instanz, die von _repository.createPlant zurückgegeben wird,
+        // sollte die aktuellste Version sein. Aber um sicherzugehen, dass die
+        // photoUrl korrekt gesetzt wird, erstellen wir eine neue Kopie.
         Plant plantWithPhoto =
             createdPlant.copyWith(photoUrl: () => uploadedPhotoUrl);
+        // Erneutes Speichern in der DB, um die photoUrl zu persistieren
         createdPlant = await _repository.updatePlant(plantWithPhoto);
-        debugPrint('Plant record updated with photoUrl');
+        // ignore: avoid_print
+        print('Plant record updated with photoUrl');
       }
 
       ref.invalidate(plantsProvider);
       ref.invalidate(plantDetailProvider(createdPlant.id));
-      ref.invalidate(plantStatsProvider);
+      ref.invalidate(plantStatsProvider); // Stats auch aktualisieren
       return createdPlant;
     } catch (e) {
-      debugPrint('Error creating plant in PlantController: $e');
-      rethrow;
+      // ignore: avoid_print
+      print('Error creating plant in PlantController: $e');
+      rethrow; // Wirft den Fehler weiter, damit er im UI behandelt werden kann
     }
   }
 
@@ -125,7 +140,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       ref.invalidate(plantStatsProvider);
       return true;
     } catch (e) {
-      debugPrint('Error updating plant: $e');
+      // ignore: avoid_print
+      print('Error updating plant: $e');
       return false;
     }
   }
@@ -148,7 +164,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       }
       return success;
     } catch (e) {
-      debugPrint('Error updating plant status: $e');
+      // ignore: avoid_print
+      print('Error updating plant status: $e');
       return false;
     }
   }
@@ -163,7 +180,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
           plant.copyWith(estimatedHarvestDays: () => estimatedDays);
       return await updatePlant(updatedPlant);
     } catch (e) {
-      debugPrint('Error updating harvest estimate: $e');
+      // ignore: avoid_print
+      print('Error updating harvest estimate: $e');
       return false;
     }
   }
@@ -175,7 +193,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       ref.invalidate(plantStatsProvider);
       return true;
     } catch (e) {
-      debugPrint('Error deleting plant: $e');
+      // ignore: avoid_print
+      print('Error deleting plant: $e');
       return false;
     }
   }
@@ -189,7 +208,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
           imageQuality: 85);
       return photo?.path;
     } catch (e) {
-      debugPrint('Error taking photo: $e');
+      // ignore: avoid_print
+      print('Error taking photo: $e');
       return null;
     }
   }
@@ -203,7 +223,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
           imageQuality: 85);
       return photo?.path;
     } catch (e) {
-      debugPrint('Error picking photo: $e');
+      // ignore: avoid_print
+      print('Error picking photo: $e');
       return null;
     }
   }
@@ -228,41 +249,51 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         notes: notes,
       );
       await _repository.saveHarvest(harvest);
-      ref.invalidate(plantHarvestsProvider(plantId));
+      ref.invalidate(plantHarvestsProvider(plantId)); // Ernten neu laden
+
+      // Status der Pflanze ggf. auf Harvest oder Completed setzen
       PlantStatus newStatus;
       if (dryWeight != null && dryingCompletedDate != null) {
         newStatus = PlantStatus.completed;
       } else if (dryWeight != null) {
+        // Trockengewicht da, aber Trocknung nicht explizit beendet -> Curing
         newStatus = PlantStatus.curing;
       } else {
+        // Nur Frischgewicht oder gar kein Gewicht -> Trocknung
         newStatus = PlantStatus.drying;
       }
+
+      // Nur Status updaten wenn es Sinn macht (nicht von Completed zurück auf Drying)
       final currentPlant = await _repository.getPlantById(plantId);
       if (currentPlant != null &&
-          currentPlant.status != PlantStatus.harvest &&
-          currentPlant.status != PlantStatus.drying &&
-          currentPlant.status != PlantStatus.curing &&
-          currentPlant.status != PlantStatus.completed) {
-        await updatePlantStatus(plantId, PlantStatus.harvest);
+          currentPlant.status.index < PlantStatus.harvest.index) {
+        await updatePlantStatus(
+            plantId, PlantStatus.harvest); // Erstmal auf Harvest setzen
       }
-      await updatePlantStatus(plantId, newStatus);
+      // Dann den spezifischeren Status (Drying, Curing, Completed)
+      if (currentPlant != null && currentPlant.status.index < newStatus.index) {
+        await updatePlantStatus(plantId, newStatus);
+      }
+
       return true;
     } catch (e) {
-      debugPrint('Error adding harvest: $e');
+      // ignore: avoid_print
+      print('Error adding harvest: $e');
       return false;
     }
   }
 
   Future<Map<String, dynamic>> getPlantStats() async {
     try {
-      final plants = await _repository.getAllPlants();
+      final plants = await _repository.getAllPlants(); // Holt nur die des Users
       final statusCounts = await _repository.getPlantCountsByStatus();
 
-      // Erweiterte Statistiken für das neue Dashboard
       final activePlants = plants
           .where((p) =>
               p.status != PlantStatus.completed &&
-              p.status != PlantStatus.harvest &&
+              p.status !=
+                  PlantStatus
+                      .harvest && // Ernte ist ein Prozess, keine final abgeschlossene Pflanze
               p.status != PlantStatus.drying &&
               p.status != PlantStatus.curing)
           .toList();
@@ -270,6 +301,7 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       final completedPlants =
           plants.where((p) => p.status == PlantStatus.completed).toList();
 
+      // Geerntet und in Verarbeitung (Trocknung, Curing)
       final harvestingPlants = plants
           .where((p) =>
               p.status == PlantStatus.harvest ||
@@ -277,13 +309,13 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
               p.status == PlantStatus.curing)
           .toList();
 
-      // Pflanzen die Aufmerksamkeit brauchen
       final harvestReady = plants
           .where((p) =>
               p.daysUntilHarvest != null &&
               p.daysUntilHarvest! <= 7 &&
               p.daysUntilHarvest! >= 0 &&
-              p.status != PlantStatus.harvest &&
+              p.status !=
+                  PlantStatus.harvest && // Noch nicht als Ernte markiert
               p.status != PlantStatus.drying &&
               p.status != PlantStatus.curing &&
               p.status != PlantStatus.completed)
@@ -293,10 +325,15 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
           .where((p) =>
               p.daysUntilHarvest != null &&
               p.daysUntilHarvest! < 0 &&
-              p.status != PlantStatus.completed)
+              p.status !=
+                  PlantStatus.completed && // Nicht bereits abgeschlossen
+              p.status !=
+                  PlantStatus
+                      .harvest && // Und nicht bereits in Ernte/Trocknung etc.
+              p.status != PlantStatus.drying &&
+              p.status != PlantStatus.curing)
           .length;
 
-      // Durchschnittsalter nur für aktive Pflanzen
       final activeAges = activePlants
           .where((p) => p.ageInDays >= 0)
           .map((p) => p.ageInDays)
@@ -305,23 +342,21 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
           ? activeAges.reduce((a, b) => a + b) / activeAges.length
           : 0.0;
 
-      // Wachstumstrends (simuliert für Demo)
       final thisWeekPlants = plants
           .where((p) => DateTime.now().difference(p.createdAt).inDays <= 7)
           .length;
-
       final lastWeekPlants = plants.where((p) {
         final daysSince = DateTime.now().difference(p.createdAt).inDays;
         return daysSince > 7 && daysSince <= 14;
       }).length;
-
       final growthTrend = thisWeekPlants - lastWeekPlants;
 
       return {
         'total': plants.length,
         'active': activePlants.length,
         'completed': completedPlants.length,
-        'harvest': harvestingPlants.length,
+        'harvesting':
+            harvestingPlants.length, // Umbenannt von 'harvest' für Klarheit
         'harvestReady': harvestReady,
         'overdue': overdue,
         'averageAge': averageAge,
@@ -329,8 +364,6 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         'growthTrend': growthTrend,
         'thisWeekPlants': thisWeekPlants,
         'lastWeekPlants': lastWeekPlants,
-
-        // Zusätzliche Dashboard-Statistiken
         'plantsByType': _getPlantsByType(plants),
         'plantsByLocation': _getPlantsByLocation(plants),
         'upcomingHarvests': _getUpcomingHarvests(plants),
@@ -338,7 +371,8 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         'needsAttention': _getPlantsNeedingAttention(plants).length,
       };
     } catch (e) {
-      debugPrint('Error getting plant stats: $e');
+      // ignore: avoid_print
+      print('Error getting plant stats: $e');
       return {};
     }
   }
@@ -366,13 +400,17 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         .where((p) =>
             p.daysUntilHarvest != null &&
             p.daysUntilHarvest! > 0 &&
-            p.daysUntilHarvest! <= 30)
+            p.daysUntilHarvest! <= 30 && // Innerhalb der nächsten 30 Tage
+            p.status != PlantStatus.completed && // Noch nicht abgeschlossen
+            p.status != PlantStatus.harvest &&
+            p.status != PlantStatus.drying &&
+            p.status != PlantStatus.curing)
         .toList();
 
     upcoming.sort((a, b) => a.daysUntilHarvest!.compareTo(b.daysUntilHarvest!));
 
     return upcoming
-        .take(5)
+        .take(5) // Nimm die nächsten 5
         .map((plant) => {
               'plantId': plant.id,
               'name': plant.name,
@@ -384,38 +422,50 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
   }
 
   int _getHealthyPlantsCount(List<Plant> plants) {
+    // "Gesund" = aktiv und weder überfällig noch bald erntereif (ohne speziellen Hinweis)
     return plants.where((plant) {
-      // Definiere "gesund" als Pflanzen ohne Probleme
-      final hasOverdueHarvest =
-          plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0;
-      final hasLongUpdate =
-          DateTime.now().difference(plant.updatedAt).inDays > 14;
+      final isActive = plant.status != PlantStatus.completed &&
+          plant.status != PlantStatus.harvest &&
+          plant.status != PlantStatus.drying &&
+          plant.status != PlantStatus.curing;
+      if (!isActive) return false;
 
-      return !hasOverdueHarvest && !hasLongUpdate;
+      final isOverdue =
+          plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0;
+      final isHarvestReady =
+          plant.daysUntilHarvest != null && plant.daysUntilHarvest! <= 7;
+
+      return !isOverdue && !isHarvestReady;
     }).length;
   }
 
   List<Plant> _getPlantsNeedingAttention(List<Plant> plants) {
     return plants.where((plant) {
+      // Aktive Pflanzen, die nicht abgeschlossen oder schon im Ernteprozess sind
+      final isActiveCarePhase = plant.status != PlantStatus.completed &&
+          plant.status != PlantStatus.harvest &&
+          plant.status != PlantStatus.drying &&
+          plant.status != PlantStatus.curing;
+
+      if (!isActiveCarePhase) return false;
+
       // Überfällige Ernten
       if (plant.daysUntilHarvest != null && plant.daysUntilHarvest! < 0) {
         return true;
       }
-
-      // Lange keine Updates
-      final daysSinceUpdate = DateTime.now().difference(plant.updatedAt).inDays;
-      if (daysSinceUpdate > 14 && plant.status != PlantStatus.completed) {
-        return true;
-      }
-
       // Bald erntereif
       if (plant.daysUntilHarvest != null &&
           plant.daysUntilHarvest! <= 7 &&
-          plant.daysUntilHarvest! >= 0 &&
-          plant.status != PlantStatus.harvest) {
+          plant.daysUntilHarvest! >= 0) {
         return true;
       }
-
+      // Lange keine Updates (für aktive Pflanzen, die nicht gerade erst gekeimt sind)
+      final daysSinceUpdate = DateTime.now().difference(plant.updatedAt).inDays;
+      if (daysSinceUpdate > 14 &&
+          plant.status != PlantStatus.seeded &&
+          plant.status != PlantStatus.germinated) {
+        return true;
+      }
       return false;
     }).toList();
   }
@@ -428,13 +478,15 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
         return daysLeft != null &&
             daysLeft >= 0 &&
             daysLeft <= daysThreshold &&
-            plant.status != PlantStatus.harvest &&
+            plant.status !=
+                PlantStatus.harvest && // Noch nicht als Ernte markiert
             plant.status != PlantStatus.drying &&
             plant.status != PlantStatus.curing &&
             plant.status != PlantStatus.completed;
       }).toList();
     } catch (e) {
-      debugPrint('Error getting plants near harvest: $e');
+      // ignore: avoid_print
+      print('Error getting plants near harvest: $e');
       return [];
     }
   }
@@ -444,12 +496,14 @@ class PlantController extends StateNotifier<AsyncValue<List<Plant>>> {
       final plants = await _repository.getAllPlants();
       return _getPlantsNeedingAttention(plants);
     } catch (e) {
-      debugPrint('Error getting plants needing attention: $e');
+      // ignore: avoid_print
+      print('Error getting plants needing attention: $e');
       return [];
     }
   }
 }
 
+// Providers
 final plantControllerProvider =
     StateNotifierProvider<PlantController, AsyncValue<List<Plant>>>((ref) {
   final repository = ref.read(plantRepositoryProvider);
@@ -462,16 +516,19 @@ final plantHarvestsProvider =
   return repository.getHarvestsForPlant(plantId);
 });
 
+// Provider für die aggregierten Pflanzenstatistiken
 final plantStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantStats();
 });
 
+// Provider für Pflanzen, die bald geerntet werden können
 final plantsNearHarvestProvider = FutureProvider<List<Plant>>((ref) async {
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantsNearHarvest();
 });
 
+// Provider für Pflanzen, die Aufmerksamkeit benötigen
 final plantsNeedingAttentionProvider = FutureProvider<List<Plant>>((ref) async {
   final controller = ref.read(plantControllerProvider.notifier);
   return controller.getPlantsNeedingAttention();

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/plant.dart';
 import '../../plants/controllers/plant_controller.dart';
+// NEUER Import für SupabaseService
+import '../../../data/services/supabase_service.dart';
 
 class QuickActionsFab extends ConsumerStatefulWidget {
   const QuickActionsFab({super.key});
@@ -34,7 +36,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     );
     _rotateAnimation = Tween<double>(
       begin: 0.0,
-      end: 0.75, // 3/4 Rotation
+      end: 0.75,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
@@ -59,12 +61,9 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
   }
 
   void _onActionTap(VoidCallback action) {
-    // Schließe erst das Menü, dann führe Aktion aus
     if (_isExpanded) {
       _toggle();
-      Future.delayed(const Duration(milliseconds: 150), action);
-    } else {
-      action();
+      Future.delayed(const Duration(milliseconds: 260), action);
     }
   }
 
@@ -73,103 +72,108 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     return Stack(
       alignment: Alignment.bottomRight,
       children: [
-        // FIXED: Backdrop mit korrekter Transparenz
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            if (!_isExpanded && _expandAnimation.value == 0) {
-              return const SizedBox.shrink();
-            }
-
-            return Positioned.fill(
-              child: GestureDetector(
-                onTap: _toggle,
+        if (_isExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _toggle,
+              child: AnimatedOpacity(
+                opacity: _isExpanded ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 250),
+                // KORREKTUR: withAlpha statt withOpacity
                 child: Container(
-                  // FIXED: Korrekte Transparenz ohne .withAlpha Probleme
-                  color: Color.fromRGBO(0, 0, 0, _expandAnimation.value * 0.5),
-                ),
+                    color: Colors.black.withAlpha((0.5 * 255).round())),
               ),
-            );
-          },
-        ),
-
-        // Action Buttons
+            ),
+          ),
         AnimatedBuilder(
           animation: _expandAnimation,
           builder: (context, child) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Quick Photo Action
-                _buildActionButton(
-                  onTap: () => _onActionTap(() => _quickPhoto(context)),
-                  icon: Icons.camera_alt,
-                  label: 'Foto aufnehmen',
-                  color: Colors.blue.shade600,
-                  delay: 0,
-                ),
-
-                // Add Note Action
-                _buildActionButton(
-                  onTap: () => _onActionTap(() => _quickNote(context)),
-                  icon: Icons.note_add,
-                  label: 'Notiz hinzufügen',
-                  color: Colors.orange.shade600,
-                  delay: 50,
-                ),
-
-                // Update Status Action
-                _buildActionButton(
-                  onTap: () => _onActionTap(() => _quickStatusUpdate(context)),
-                  icon: Icons.update,
-                  label: 'Status ändern',
-                  color: Colors.green.shade600,
-                  delay: 100,
-                ),
-
-                // New Plant Action - Wichtigste Aktion
-                _buildActionButton(
-                  onTap: () => _onActionTap(() => context.goNamed('add_plant')),
-                  icon: Icons.add_circle,
-                  label: 'Neue Pflanze',
-                  color: AppColors.primaryColor,
-                  delay: 150,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Main FAB - Verbessertes Design
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+            return Positioned(
+              right: 0,
+              bottom: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (_isExpanded)
+                    _buildActionButton(
+                      onTap: () =>
+                          _onActionTap(() => context.goNamed('qr_scanner')),
+                      icon: Icons.qr_code_scanner_rounded,
+                      label: 'QR-Code scannen',
+                      color: Colors.purple.shade500,
+                      animationValue: _expandAnimation.value,
+                      index: 0,
+                    ),
+                  if (_isExpanded)
+                    _buildActionButton(
+                      onTap: () => _onActionTap(() => _quickPhoto(context)),
+                      icon: Icons.camera_alt,
+                      label: 'Foto aufnehmen',
+                      color: Colors.blue.shade600,
+                      animationValue: _expandAnimation.value,
+                      index: 1,
+                    ),
+                  if (_isExpanded)
+                    _buildActionButton(
+                      onTap: () => _onActionTap(() => _quickNote(context)),
+                      icon: Icons.note_add,
+                      label: 'Notiz hinzufügen',
+                      color: Colors.orange.shade600,
+                      animationValue: _expandAnimation.value,
+                      index: 2,
+                    ),
+                  if (_isExpanded)
+                    _buildActionButton(
+                      onTap: () =>
+                          _onActionTap(() => _quickStatusUpdate(context)),
+                      icon: Icons.update,
+                      label: 'Status ändern',
+                      color: Colors.green.shade600,
+                      animationValue: _expandAnimation.value,
+                      index: 3,
+                    ),
+                  if (_isExpanded)
+                    _buildActionButton(
+                      onTap: () =>
+                          _onActionTap(() => context.goNamed('add_plant')),
+                      icon: Icons.add_circle,
+                      label: 'Neue Pflanze',
+                      color: AppColors.primaryColor,
+                      animationValue: _expandAnimation.value,
+                      index: 4,
+                    ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          // KORREKTUR: withAlpha statt withOpacity
+                          color: AppColors.primaryColor
+                              .withAlpha((0.3 * 255).round()),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: _toggle,
+                      backgroundColor: AppColors.primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      heroTag: 'dashboard_fab',
+                      child: RotationTransition(
+                        turns: _rotateAnimation,
+                        child: Icon(
+                          _isExpanded ? Icons.close : Icons.add,
+                          size: 28,
+                        ),
                       ),
-                    ],
-                  ),
-                  child: FloatingActionButton(
-                    onPressed: _toggle,
-                    backgroundColor: AppColors.primaryColor,
-                    foregroundColor: Colors.white,
-                    elevation: 0, // Shadow kommt vom Container
-                    child: AnimatedBuilder(
-                      animation: _rotateAnimation,
-                      builder: (context, child) {
-                        return Transform.rotate(
-                          angle: _rotateAnimation.value * 2 * 3.14159,
-                          child: Icon(
-                            _isExpanded ? Icons.close : Icons.add,
-                            size: 28,
-                          ),
-                        );
-                      },
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -182,43 +186,45 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     required IconData icon,
     required String label,
     required Color color,
-    required int delay,
+    required double animationValue,
+    required int index,
   }) {
-    return AnimatedBuilder(
-      animation: _expandAnimation,
-      builder: (context, child) {
-        final delayedAnimation = Tween<double>(
-          begin: 0.0,
-          end: 1.0,
-        ).animate(CurvedAnimation(
-          parent: _animationController,
-          curve: Interval(
-            delay / 200.0, // Delay als Prozentsatz
-            1.0,
-            curve: Curves.easeOut,
-          ),
-        ));
+    final double scale = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(
+            parent: _animationController,
+            curve: Interval((index * 0.1), 1.0, curve: Curves.easeOut)))
+        .value;
+    final double opacity = scale;
 
-        return Transform.scale(
-          scale: delayedAnimation.value,
-          child: Opacity(
-            opacity: delayedAnimation.value,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // IMPROVED: Besseres Label-Design
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+    return Transform.scale(
+      scale: scale,
+      child: Opacity(
+        opacity: opacity,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16, right: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (animationValue > 0.7)
+                FadeTransition(
+                  opacity: Tween<double>(begin: 0.0, end: 1.0)
+                      .animate(CurvedAnimation(
+                    parent: _animationController,
+                    curve: Interval(0.7 + (index * 0.05), 1.0,
+                        curve: Curves.easeIn),
+                  )),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
+                          // KORREKTUR: withAlpha statt withOpacity
+                          color: Colors.black.withAlpha((0.1 * 255).round()),
+                          blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -226,78 +232,112 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                     child: Text(
                       label,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 12),
-
-                  // IMPROVED: Besseres Action Button Design
-                  GestureDetector(
-                    onTap: onTap,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        icon,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              const SizedBox(width: 12),
+              FloatingActionButton.small(
+                heroTag: null,
+                onPressed: onTap,
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                child: Icon(icon, size: 22),
               ),
-            ),
+            ],
           ),
-        );
+        ),
+      ),
+    );
+  }
+
+  void _quickPhoto(BuildContext context) {
+    // context hier übergeben
+    final plantsAsync = ref.read(plantsProvider);
+    plantsAsync.when(
+      data: (plants) async {
+        if (!mounted) return; // mounted check HINZUGEFÜGT
+        if (plants.isEmpty) {
+          _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
+          return;
+        }
+        final selectedPlant = await _showPlantSelection(
+            context, plants, 'Foto für welche Pflanze?');
+        if (!mounted) return; // mounted check HINZUGEFÜGT
+        if (selectedPlant != null) {
+          final controller = ref.read(plantControllerProvider.notifier);
+          final photoPath = await controller.takePlantPhoto();
+          if (!mounted) return; // mounted check HINZUGEFÜGT
+          if (photoPath != null) {
+            _showMessage(
+                context, 'Foto für ${selectedPlant.name} wird verarbeitet...');
+            final userId = SupabaseService
+                .currentUserId; // SupabaseService jetzt verfügbar
+            if (userId == null) {
+              if (!mounted) return; // mounted check HINZUGEFÜGT
+              _showMessage(context, 'Benutzer nicht angemeldet.',
+                  isError: true);
+              return;
+            }
+            try {
+              final uploadedPhotoUrl = await ref
+                  .read(plantRepositoryProvider)
+                  .uploadPlantPhoto(userId, selectedPlant.id, photoPath);
+              final updatedPlant =
+                  selectedPlant.copyWith(photoUrl: () => uploadedPhotoUrl);
+              await controller.updatePlant(updatedPlant);
+              if (mounted) {
+                // mounted check HINZUGEFÜGT
+                _showMessage(context, 'Foto erfolgreich hinzugefügt!');
+                context.goNamed('plant_detail',
+                    pathParameters: {'plantId': selectedPlant.id});
+              }
+            } catch (e) {
+              if (mounted) {
+                // mounted check HINZUGEFÜGT
+                _showMessage(context, 'Fehler beim Hochladen des Fotos: $e',
+                    isError: true);
+              }
+            }
+          } else {
+            if (!mounted) return; // mounted check HINZUGEFÜGT
+            _showMessage(context, 'Kein Foto aufgenommen/ausgewählt.');
+          }
+        }
+      },
+      loading: () {
+        // Keine asynchrone Operation, kein BuildContext-Problem
+        _showMessage(context, 'Pflanzen werden geladen...');
+      },
+      error: (_, __) {
+        // Keine asynchrone Operation, kein BuildContext-Problem
+        _showMessage(context, 'Fehler beim Laden der Pflanzen', isError: true);
       },
     );
   }
 
-  // Quick Actions Implementation - Vereinfacht
-  void _quickPhoto(BuildContext context) {
+  void _quickNote(BuildContext context) {
+    // context hier übergeben
     final plantsAsync = ref.read(plantsProvider);
-
-    // FIXED: Removed incorrect await - plantsAsync.when() returns void
     plantsAsync.when(
       data: (plants) async {
+        if (!mounted) return;
         if (plants.isEmpty) {
-          if (context.mounted) {
-            _showMessage(context, 'Erstelle zuerst eine Pflanze!',
-                isError: true);
-          }
+          _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
           return;
         }
-
-        // Zeige Plant-Auswahl für Schnellfoto
         final selectedPlant = await _showPlantSelection(
-            context, plants, 'Foto für welche Pflanze?');
-
-        if (selectedPlant != null && context.mounted) {
-          final controller = ref.read(plantControllerProvider.notifier);
-          final photoPath = await controller.takePlantPhoto();
-
-          if (photoPath != null && context.mounted) {
-            context.goNamed(
-              'plant_detail',
-              pathParameters: {'plantId': selectedPlant.id},
-            );
-            _showMessage(context, 'Foto aufgenommen! Lade hoch...');
-          }
+            context, plants, 'Notiz für welche Pflanze?');
+        if (!mounted) return;
+        if (selectedPlant != null) {
+          context.goNamed('plant_detail',
+              pathParameters: {'plantId': selectedPlant.id});
+          _showMessage(
+              context, 'Öffne Details für ${selectedPlant.name} zum Notieren.');
         }
       },
       loading: () => _showMessage(context, 'Pflanzen werden geladen...'),
@@ -306,212 +346,164 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     );
   }
 
-  void _quickNote(BuildContext context) {
-    final plantsAsync = ref.read(plantsProvider);
-
-    plantsAsync.when(
-      data: (plants) async {
-        if (plants.isEmpty) {
-          if (context.mounted) {
-            _showMessage(context, 'Erstelle zuerst eine Pflanze!',
-                isError: true);
-          }
-          return;
-        }
-
-        final selectedPlant = await _showPlantSelection(
-            context, plants, 'Notiz für welche Pflanze?');
-
-        if (selectedPlant != null && context.mounted) {
-          context.goNamed(
-            'plant_detail',
-            pathParameters: {'plantId': selectedPlant.id},
-          );
-        }
-      },
-      loading: () => null,
-      error: (_, __) => null,
-    );
-  }
-
   void _quickStatusUpdate(BuildContext context) {
+    // context hier übergeben
     final plantsAsync = ref.read(plantsProvider);
-
     plantsAsync.when(
       data: (plants) async {
+        if (!mounted) return;
         if (plants.isEmpty) {
-          if (context.mounted) {
-            _showMessage(context, 'Erstelle zuerst eine Pflanze!',
-                isError: true);
-          }
+          _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
           return;
         }
-
         final selectedPlant = await _showPlantSelection(
             context, plants, 'Status für welche Pflanze ändern?');
-
-        if (selectedPlant != null && context.mounted) {
-          context.goNamed(
-            'plant_detail',
-            pathParameters: {'plantId': selectedPlant.id},
-          );
+        if (!mounted) return;
+        if (selectedPlant != null) {
+          context.goNamed('plant_detail',
+              pathParameters: {'plantId': selectedPlant.id});
+          _showMessage(context,
+              'Öffne Details für ${selectedPlant.name} zur Statusänderung.');
         }
       },
-      loading: () => null,
-      error: (_, __) => null,
+      loading: () => _showMessage(context, 'Pflanzen werden geladen...'),
+      error: (_, __) => _showMessage(context, 'Fehler beim Laden der Pflanzen',
+          isError: true),
     );
   }
 
-  // Helper Methods
   void _showMessage(BuildContext context, String message,
       {bool isError = false}) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError ? AppColors.errorColor : null,
-        ),
-      );
-    }
+    // mounted Check ist hier nicht nötig, da _showMessage synchron aufgerufen wird
+    // von Methoden, die bereits einen mounted Check haben oder synchron sind.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.errorColor : null,
+      ),
+    );
   }
 
   Future<Plant?> _showPlantSelection(
       BuildContext context, List<Plant> plants, String title) async {
+    final sortedPlants = List<Plant>.from(plants);
+    sortedPlants.sort((a, b) {
+      final aIsActive = a.status != PlantStatus.completed;
+      final bIsActive = b.status != PlantStatus.completed;
+      if (aIsActive && !bIsActive) return -1;
+      if (!aIsActive && bIsActive) return 1;
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+
     return await showModalBottomSheet<Plant>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _PlantSelectionSheet(
-        plants: plants,
-        title: title,
-      ),
-    );
-  }
-}
-
-class _PlantSelectionSheet extends StatelessWidget {
-  final List<Plant> plants;
-  final String title;
-
-  const _PlantSelectionSheet({
-    required this.plants,
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+      builder: (ctx) => Container(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20), topRight: Radius.circular(20)),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(title,
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold)),
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Plants List
-          Flexible(
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: plants.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final plant = plants[index];
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  leading: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Color(int.parse(plant.statusColor.substring(1),
+            if (plants.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text("Keine Pflanzen vorhanden.",
+                    style: TextStyle(color: Colors.grey.shade600)),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: sortedPlants.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final plant = sortedPlants[index];
+                    final isActive = plant.status != PlantStatus.completed;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          // KORREKTUR: withAlpha statt withOpacity
+                          color: Color(int.parse(plant.statusColor.substring(1),
+                                      radix: 16) +
+                                  0xFF000000)
+                              .withAlpha((0.1 * 255).round()),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.eco_rounded,
+                          color: Color(int.parse(plant.statusColor.substring(1),
                                   radix: 16) +
-                              0xFF000000)
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.eco_rounded,
-                      color: Color(
-                          int.parse(plant.statusColor.substring(1), radix: 16) +
                               0xFF000000),
-                      size: 24,
-                    ),
+                          size: 24,
+                        ),
+                      ),
+                      title: Text(plant.name,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: isActive
+                                  ? Colors.black87
+                                  : Colors.grey.shade600)),
+                      subtitle: Text(
+                        '${plant.strain} • ${plant.status.displayName}',
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () => Navigator.of(ctx).pop(plant),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.goNamed('add_plant');
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Neue Pflanze hinzufügen'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: AppColors.primaryColor,
+                    side: const BorderSide(color: AppColors.primaryColor),
                   ),
-                  title: Text(
-                    plant.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${plant.strain} • ${plant.status.displayName}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => Navigator.of(context).pop(plant),
-                );
-              },
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Add Plant Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  context.goNamed('add_plant');
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Neue Pflanze hinzufügen'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  foregroundColor: AppColors.primaryColor,
-                  side: const BorderSide(color: AppColors.primaryColor),
                 ),
               ),
             ),
-          ),
-
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-        ],
+            SizedBox(height: MediaQuery.of(ctx).padding.bottom + 16),
+          ],
+        ),
       ),
     );
   }

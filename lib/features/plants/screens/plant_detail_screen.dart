@@ -1,13 +1,13 @@
 // lib/features/plants/screens/plant_detail_screen.dart
-import 'dart:io'; // Für File-Operationen (z.B. Image.file)
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart'; // Für ImageSource
-// Importiere intl für Datumsformatierung, falls noch nicht global verfügbar
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/qr_code_service.dart';
 import '../../../data/models/plant.dart';
 import '../../../data/models/harvest.dart';
 import '../controllers/plant_controller.dart';
@@ -16,7 +16,7 @@ import '../widgets/plant_info_card.dart';
 import '../widgets/harvest_section.dart';
 import '../../../data/services/supabase_service.dart';
 
-class PlantDetailScreen extends ConsumerWidget {
+class PlantDetailScreen extends ConsumerStatefulWidget {
   final String plantId;
 
   const PlantDetailScreen({
@@ -25,9 +25,262 @@ class PlantDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final plantAsync = ref.watch(plantDetailProvider(plantId));
-    final harvestsAsync = ref.watch(plantHarvestsProvider(plantId));
+  ConsumerState<PlantDetailScreen> createState() => _PlantDetailScreenState();
+}
+
+class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
+  final Set<LabelField> _selectedLabelFields = {
+    LabelField.displayId,
+    LabelField.plantName,
+    LabelField.strain,
+    LabelField
+        .ownerName, // Besitzername standardmäßig hinzufügen, wenn gewünscht
+  };
+
+  void _showQrOptionsDialog(BuildContext context, Plant plant) {
+    final qrService = ref.read(qrCodeServiceProvider);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                      bottom: 16.0, left: 8.0, right: 8.0),
+                  child: Text(
+                    'QR-Code Optionen für "${plant.name}"',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.qr_code_2_rounded,
+                      color: AppColors.primaryColor),
+                  title: const Text('QR-Code anzeigen'),
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _showQrCodeDialog(context, plant, qrService);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.image_rounded,
+                      color: AppColors.primaryColor),
+                  title: const Text('Als PNG exportieren/teilen'),
+                  onTap: () async {
+                    Navigator.pop(dialogContext);
+                    await _exportQrAsPng(context, plant, qrService);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.picture_as_pdf_rounded,
+                      color: AppColors.primaryColor),
+                  title: const Text('Als Etikett (PDF) exportieren/teilen'),
+                  onTap: () {
+                    Navigator.pop(dialogContext);
+                    _showPdfLabelOptionsDialog(context, plant, qrService);
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showQrCodeDialog(
+      BuildContext context, Plant plant, QrCodeService qrService) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.qr_code_2_rounded, color: AppColors.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text('QR-Code: ${plant.name}',
+                    overflow: TextOverflow.ellipsis)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 220,
+              height: 220,
+              child: qrService.generateQrWidget(plant.id, size: 220),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'ID: ${plant.displayId}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            if (plant.ownerName != null && plant.ownerName!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text('Besitzer: ${plant.ownerName}',
+                    style: TextStyle(color: Colors.grey.shade700)),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Schließen'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportQrAsPng(
+      BuildContext context, Plant plant, QrCodeService qrService) async {
+    final filePath = await qrService.createQrCodePngFile(plant);
+    if (!mounted) return;
+    if (filePath != null) {
+      await qrService.shareFile(
+        filePath,
+        subject: 'QR-Code für ${plant.name}',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PNG QR-Code wird geteilt...')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Fehler beim Erstellen des PNG QR-Codes'),
+            backgroundColor: AppColors.errorColor),
+      );
+    }
+  }
+
+  void _showPdfLabelOptionsDialog(
+      BuildContext context, Plant plant, QrCodeService qrService) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(builder: (stfContext, setDialogState) {
+          return AlertDialog(
+            title: const Text('Etikett-Optionen (PDF)'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Felder für das Etikett auswählen:'),
+                  const SizedBox(height: 8),
+                  ...LabelField.values.map((field) {
+                    String title;
+                    bool isVisible = true;
+                    switch (field) {
+                      case LabelField.plantName:
+                        title = 'Pflanzenname';
+                        break;
+                      case LabelField.displayId:
+                        title = 'Anzeige-ID';
+                        break;
+                      case LabelField.ownerName:
+                        title = 'Besitzer';
+                        if (plant.ownerName == null ||
+                            plant.ownerName!.isEmpty) {
+                          isVisible = false;
+                        }
+                        break;
+                      case LabelField.strain:
+                        title = 'Sorte/Strain';
+                        break;
+                      case LabelField.plantType:
+                        title = 'Pflanzenart';
+                        break;
+                      case LabelField.status:
+                        title = 'Status';
+                        break;
+                      case LabelField.age:
+                        title = 'Alter';
+                        break;
+                    }
+                    if (!isVisible) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return CheckboxListTile(
+                      title: Text(title),
+                      value: _selectedLabelFields.contains(field),
+                      onChanged: (bool? value) {
+                        setDialogState(() {
+                          if (value == true) {
+                            _selectedLabelFields.add(field);
+                          } else {
+                            _selectedLabelFields.remove(field);
+                          }
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  }).toList(),
+                  const SizedBox(height: 16),
+                  const Text('Vorschau (schematisch):'),
+                  const SizedBox(height: 4),
+                  Center(
+                      child: qrService.buildLabelPreview(
+                          _selectedLabelFields, plant)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Abbrechen'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await _exportLabelAsPdf(context, plant, qrService);
+                },
+                child: const Text('PDF erstellen & Teilen'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  Future<void> _exportLabelAsPdf(
+      BuildContext context, Plant plant, QrCodeService qrService) async {
+    final filePath =
+        await qrService.createPlantLabelPdfFile(plant, _selectedLabelFields);
+    if (!mounted) return;
+    if (filePath != null) {
+      await qrService.shareFile(filePath, subject: 'Etikett für ${plant.name}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF-Etikett wird geteilt...')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Fehler beim Erstellen des PDF-Etiketts'),
+            backgroundColor: AppColors.errorColor),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plantAsync = ref.watch(plantDetailProvider(widget.plantId));
+    final harvestsAsync = ref.watch(plantHarvestsProvider(widget.plantId));
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -48,12 +301,12 @@ class PlantDetailScreen extends ConsumerWidget {
                 ),
               );
             }
-            // Übergabe des BuildContext an _buildPlantDetail
             return _buildPlantDetailContent(context, ref, plant, harvestsAsync);
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) {
-            debugPrint('Error loading plant detail: $error\n$stackTrace');
+            // ignore: avoid_print
+            print('Error loading plant detail: $error\n$stackTrace');
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -63,8 +316,9 @@ class PlantDetailScreen extends ConsumerWidget {
                   Text(
                       'Fehler beim Laden der Pflanzendetails: ${error.toString()}'),
                   TextButton(
-                    onPressed: () =>
-                        ref.invalidate(plantDetailProvider(plantId)),
+                    onPressed: () {
+                      ref.invalidate(plantDetailProvider(widget.plantId));
+                    },
                     child: const Text('Erneut versuchen'),
                   ),
                 ],
@@ -74,9 +328,8 @@ class PlantDetailScreen extends ConsumerWidget {
     );
   }
 
-  // Der BuildContext wird jetzt hier übergeben
   Widget _buildPlantDetailContent(
-    BuildContext context, // BuildContext hier als Parameter
+    BuildContext context,
     WidgetRef ref,
     Plant plant,
     AsyncValue<List<Harvest>> harvestsAsync,
@@ -93,50 +346,38 @@ class PlantDetailScreen extends ConsumerWidget {
             onPressed: () => context.goNamed('dashboard'),
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.qr_code_2_rounded),
+              tooltip: 'QR-Code Optionen',
+              onPressed: () => _showQrOptionsDialog(context, plant),
+            ),
             PopupMenuButton<String>(
-              onSelected: (value) => _handleMenuAction(
-                  context, ref, plant, value), // context hier verwenden
+              onSelected: (value) =>
+                  _handleMenuAction(context, ref, plant, value),
               itemBuilder: (popupContext) => [
-                // popupContext für das Menü
                 const PopupMenuItem(
                   value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
-                      Text('Bearbeiten'),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.edit, size: 20),
+                    SizedBox(width: 8),
+                    Text('Bearbeiten')
+                  ]),
                 ),
                 const PopupMenuItem(
                   value: 'harvest',
-                  child: Row(
-                    children: [
-                      Icon(Icons.agriculture, size: 20),
-                      SizedBox(width: 8),
-                      Text('Ernte dokumentieren'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'qr',
-                  child: Row(
-                    children: [
-                      Icon(Icons.qr_code, size: 20),
-                      SizedBox(width: 8),
-                      Text('QR-Code anzeigen'),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.agriculture, size: 20),
+                    SizedBox(width: 8),
+                    Text('Ernte dokumentieren')
+                  ]),
                 ),
                 const PopupMenuItem(
                   value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Löschen', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.delete, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Löschen', style: TextStyle(color: Colors.red))
+                  ]),
                 ),
               ],
             ),
@@ -148,23 +389,17 @@ class PlantDetailScreen extends ConsumerWidget {
             title: Text(
               plant.name,
               style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
               overflow: TextOverflow.ellipsis,
             ),
             background: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  // Gradient für den gesamten Hintergrund der FlexibleSpaceBar
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    // Korrekte Position für colors
-                    AppColors.primaryColor,
-                    AppColors.gradientEnd,
-                  ],
+                  colors: [AppColors.primaryColor, AppColors.gradientEnd],
                 ),
               ),
               child: plant.photoUrl != null &&
@@ -177,14 +412,12 @@ class PlantDetailScreen extends ConsumerWidget {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(
-                            child: Icon(Icons.broken_image,
-                                size: 80, color: Colors.white54),
-                          ),
+                                  child: Icon(Icons.broken_image,
+                                      size: 80, color: Colors.white54)),
                         ),
                         Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
-                                // Innerer Gradient über dem Bild
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: [Colors.transparent, Colors.black87],
@@ -200,14 +433,12 @@ class PlantDetailScreen extends ConsumerWidget {
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
                                 const Center(
-                              child: Icon(Icons.eco_rounded,
-                                  size: 80, color: Colors.white54),
-                            ),
+                                    child: Icon(Icons.eco_rounded,
+                                        size: 80, color: Colors.white54)),
                           ),
                           Container(
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                  // Innerer Gradient über dem Bild
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [Colors.transparent, Colors.black87],
@@ -216,12 +447,8 @@ class PlantDetailScreen extends ConsumerWidget {
                           ),
                         ])
                       : const Center(
-                          child: Icon(
-                            Icons.eco_rounded,
-                            size: 80,
-                            color: Colors.white54,
-                          ),
-                        ),
+                          child: Icon(Icons.eco_rounded,
+                              size: 80, color: Colors.white54)),
             ),
           ),
         ),
@@ -236,21 +463,16 @@ class PlantDetailScreen extends ConsumerWidget {
                 StatusTimeline(plant: plant),
                 const SizedBox(height: 16),
                 harvestsAsync.when(
-                  data: (harvests) => HarvestSection(
-                    plant: plant,
-                    harvests: harvests,
-                  ),
+                  data: (harvests) =>
+                      HarvestSection(plant: plant, harvests: harvests),
                   loading: () => const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
+                      child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()))),
                   error: (_, __) => const Card(
                       child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('Fehler beim Laden der Ernte-Daten.'),
-                  )),
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('Fehler beim Laden der Ernte-Daten.'))),
                 ),
                 const SizedBox(height: 16),
                 if (plant.notes != null && plant.notes!.isNotEmpty) ...[
@@ -268,23 +490,16 @@ class PlantDetailScreen extends ConsumerWidget {
                               Icon(Icons.notes_rounded,
                                   size: 20, color: AppColors.primaryColor),
                               SizedBox(width: 8),
-                              Text(
-                                'Notizen',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              Text('Notizen',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            plant.notes!,
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                              height: 1.5,
-                            ),
-                          ),
+                          Text(plant.notes!,
+                              style: TextStyle(
+                                  color: Colors.grey.shade700, height: 1.5)),
                         ],
                       ),
                     ),
@@ -300,20 +515,15 @@ class PlantDetailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Aktionen',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        const Text('Aktionen',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () => _addPhoto(context, ref,
-                                    plant), // context hier verwenden
+                                onPressed: () => _addPhoto(context, ref, plant),
                                 icon: const Icon(Icons.add_a_photo),
                                 label: const Text('Foto ändern'),
                                 style: OutlinedButton.styleFrom(
@@ -328,8 +538,7 @@ class PlantDetailScreen extends ConsumerWidget {
                             const SizedBox(width: 12),
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () => _addNote(context, ref,
-                                    plant), // context hier verwenden
+                                onPressed: () => _addNote(context, ref, plant),
                                 icon: const Icon(Icons.note_add),
                                 label: const Text('Notiz ändern'),
                                 style: OutlinedButton.styleFrom(
@@ -347,7 +556,7 @@ class PlantDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 60),
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -356,7 +565,6 @@ class PlantDetailScreen extends ConsumerWidget {
     );
   }
 
-  // context wird jetzt als Parameter übergeben
   void _handleMenuAction(
       BuildContext context, WidgetRef ref, Plant plant, String action) {
     switch (action) {
@@ -366,13 +574,10 @@ class PlantDetailScreen extends ConsumerWidget {
         );
         break;
       case 'harvest':
-        _showHarvestDialog(context, ref, plant); // context weitergeben
-        break;
-      case 'qr':
-        _showQRCode(context, plant); // context weitergeben
+        _showHarvestDialog(context, ref, plant);
         break;
       case 'delete':
-        _showDeleteDialog(context, ref, plant); // context weitergeben
+        _showDeleteDialog(context, ref, plant);
         break;
     }
   }
@@ -385,10 +590,9 @@ class PlantDetailScreen extends ConsumerWidget {
     DateTime? selectedDryingCompletedDate;
 
     showDialog(
-      context: context, // Dieser context ist der von _buildPlantDetailContent
+      context: context,
       builder: (dialogContext) =>
           StatefulBuilder(builder: (innerDialogContext, setDialogState) {
-        // innerDialogContext für den Dialog-State
         return AlertDialog(
           title: const Text('Ernte dokumentieren'),
           content: SingleChildScrollView(
@@ -397,11 +601,11 @@ class PlantDetailScreen extends ConsumerWidget {
               children: [
                 ListTile(
                   title: Text(
-                      "Erntedatum: ${DateFormat('dd.MM.yyyy').format(selectedHarvestDate)}"), // intl Format
+                      "Erntedatum: ${DateFormat('dd.MM.yyyy').format(selectedHarvestDate)}"),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final DateTime? picked = await showDatePicker(
-                      context: innerDialogContext, // innerDialogContext
+                      context: innerDialogContext,
                       initialDate: selectedHarvestDate,
                       firstDate: DateTime(2000),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
@@ -419,19 +623,18 @@ class PlantDetailScreen extends ConsumerWidget {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Frischgewicht (g)',
-                    border: OutlineInputBorder(),
-                  ),
+                      labelText: 'Frischgewicht (g)',
+                      border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
                   title: Text(selectedDryingCompletedDate == null
                       ? "Trocknung abgeschlossen am (optional)"
-                      : "Trocknung abgeschlossen: ${DateFormat('dd.MM.yyyy').format(selectedDryingCompletedDate!)}"), // intl Format und Null-Check
+                      : "Trocknung abgeschlossen: ${DateFormat('dd.MM.yyyy').format(selectedDryingCompletedDate!)}"),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final DateTime? picked = await showDatePicker(
-                      context: innerDialogContext, // innerDialogContext
+                      context: innerDialogContext,
                       initialDate:
                           selectedDryingCompletedDate ?? DateTime.now(),
                       firstDate: selectedHarvestDate,
@@ -451,19 +654,17 @@ class PlantDetailScreen extends ConsumerWidget {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Trockengewicht (g) - optional',
-                    border: OutlineInputBorder(),
-                  ),
+                      labelText: 'Trockengewicht (g) - optional',
+                      border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: notesController,
                   maxLines: 3,
                   decoration: const InputDecoration(
-                    labelText: 'Notizen - optional',
-                    border: OutlineInputBorder(),
-                    alignLabelWithHint: true,
-                  ),
+                      labelText: 'Notizen - optional',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true),
                 ),
               ],
             ),
@@ -475,7 +676,7 @@ class PlantDetailScreen extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (!context.mounted) return; // Äußerer context check
+                if (!mounted) return;
 
                 final controller = ref.read(plantControllerProvider.notifier);
                 final success = await controller.addHarvest(
@@ -490,22 +691,20 @@ class PlantDetailScreen extends ConsumerWidget {
                       ? null
                       : notesController.text,
                 );
-
                 if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop();
-                  if (context.mounted) {
-                    // Äußerer context für ScaffoldMessenger
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? 'Ernte dokumentiert!'
-                            : 'Fehler beim Speichern der Ernte'),
-                        backgroundColor: success
-                            ? AppColors.successColor
-                            : AppColors.errorColor,
-                      ),
-                    );
-                  }
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success
+                          ? 'Ernte dokumentiert!'
+                          : 'Fehler beim Speichern der Ernte'),
+                      backgroundColor: success
+                          ? AppColors.successColor
+                          : AppColors.errorColor,
+                    ),
+                  );
                 }
               },
               child: const Text('Speichern'),
@@ -516,50 +715,9 @@ class PlantDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showQRCode(BuildContext context, Plant plant) {
-    showDialog(
-      context: context, // context von _buildPlantDetailContent
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('QR-Code'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.white,
-              ),
-              child: Center(
-                child: Text(
-                  plant.qrCode,
-                  style: const TextStyle(fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              plant.displayId,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Schließen'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showDeleteDialog(BuildContext context, WidgetRef ref, Plant plant) {
     showDialog(
-      context: context, // context von _buildPlantDetailContent
+      context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Pflanze löschen'),
         content: Text(
@@ -571,36 +729,33 @@ class PlantDetailScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (!context.mounted) return; // Äußerer context check
-
+              if (!mounted) return;
               final controller = ref.read(plantControllerProvider.notifier);
               final success = await controller.deletePlant(plant.id);
 
               if (dialogContext.mounted) {
                 Navigator.of(dialogContext).pop();
-                if (context.mounted) {
-                  // Äußerer context für Navigation und ScaffoldMessenger
-                  if (success) {
-                    context.goNamed('dashboard');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+              }
+              if (mounted) {
+                if (success) {
+                  context.goNamed('dashboard');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
                         content: Text('Pflanze wurde gelöscht'),
-                        backgroundColor: AppColors.successColor,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                        backgroundColor: AppColors.successColor),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
                         content: Text('Fehler beim Löschen'),
-                        backgroundColor: AppColors.errorColor,
-                      ),
-                    );
-                  }
+                        backgroundColor: AppColors.errorColor),
+                  );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Löschen', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Löschen'),
           ),
         ],
       ),
@@ -608,9 +763,8 @@ class PlantDetailScreen extends ConsumerWidget {
   }
 
   void _addPhoto(BuildContext outerContext, WidgetRef ref, Plant plant) async {
-    // outerContext als Parameter
     final source = await showModalBottomSheet<ImageSource>(
-      context: outerContext, // outerContext hier verwenden
+      context: outerContext,
       builder: (BuildContext bc) {
         return SafeArea(
           child: Column(
@@ -632,8 +786,16 @@ class PlantDetailScreen extends ConsumerWidget {
       },
     );
 
-    if (source == null) return;
-    if (!outerContext.mounted) return; // Prüfe outerContext
+    if (source == null) {
+      if (outerContext.mounted) {
+        ScaffoldMessenger.of(outerContext).showSnackBar(
+          const SnackBar(content: Text('Keine Quelle für Foto ausgewählt.')),
+        );
+      }
+      return;
+    }
+
+    if (!outerContext.mounted) return;
 
     final controller = ref.read(plantControllerProvider.notifier);
     String? photoPath;
@@ -663,10 +825,16 @@ class PlantDetailScreen extends ConsumerWidget {
             .read(plantRepositoryProvider)
             .uploadPlantPhoto(userId, plant.id, photoPath);
         final updatedPlant = plant.copyWith(photoUrl: () => uploadedPhotoUrl);
-        await controller.updatePlant(updatedPlant);
+        final success = await controller.updatePlant(updatedPlant);
+
         if (outerContext.mounted) {
           ScaffoldMessenger.of(outerContext).showSnackBar(
-            const SnackBar(content: Text('Foto erfolgreich hinzugefügt!')),
+            SnackBar(
+                content: Text(success
+                    ? 'Foto erfolgreich aktualisiert!'
+                    : 'Fehler beim Aktualisieren des Fotos'),
+                backgroundColor:
+                    success ? AppColors.successColor : AppColors.errorColor),
           );
         }
       } catch (e) {
@@ -688,10 +856,9 @@ class PlantDetailScreen extends ConsumerWidget {
   }
 
   void _addNote(BuildContext outerContext, WidgetRef ref, Plant plant) {
-    // outerContext als Parameter
     final notesController = TextEditingController(text: plant.notes ?? '');
     showDialog(
-      context: outerContext, // outerContext hier verwenden
+      context: outerContext,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Notizen bearbeiten'),
         content: TextField(
@@ -710,8 +877,7 @@ class PlantDetailScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (!outerContext.mounted) return; // outerContext check
-
+              if (!mounted) return;
               final controller = ref.read(plantControllerProvider.notifier);
               final newNotes = notesController.text.trim();
               final updatedPlant = plant.copyWith(
@@ -720,20 +886,19 @@ class PlantDetailScreen extends ConsumerWidget {
 
               if (dialogContext.mounted) {
                 Navigator.of(dialogContext).pop();
-                if (outerContext.mounted) {
-                  // outerContext für ScaffoldMessenger
-                  if (success) {
-                    ScaffoldMessenger.of(outerContext).showSnackBar(
-                      const SnackBar(content: Text('Notizen gespeichert!')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(outerContext).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fehler beim Speichern der Notizen.'),
-                        backgroundColor: AppColors.errorColor,
-                      ),
-                    );
-                  }
+              }
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(outerContext).showSnackBar(
+                    const SnackBar(content: Text('Notizen gespeichert!')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(outerContext).showSnackBar(
+                    const SnackBar(
+                      content: Text('Fehler beim Speichern der Notizen.'),
+                      backgroundColor: AppColors.errorColor,
+                    ),
+                  );
                 }
               }
             },

@@ -11,7 +11,6 @@ import '../services/supabase_service.dart';
 class PlantRepository {
   final _supabase = SupabaseService.client;
 
-  /// Stellt sicher, dass ein Profil für den aktuellen Benutzer existiert
   Future<void> _ensureProfileExists() async {
     final userId = SupabaseService.currentUserId;
     final userEmail = SupabaseService.currentUserEmail;
@@ -21,7 +20,6 @@ class PlantRepository {
     }
 
     try {
-      // Prüfe ob Profil bereits existiert
       final existingProfile = await _supabase
           .from('profiles')
           .select('id')
@@ -29,52 +27,50 @@ class PlantRepository {
           .maybeSingle();
 
       if (existingProfile == null) {
-        debugPrint(
+        // ignore: avoid_print
+        print(
             'Profil nicht gefunden für User ID: $userId. Erstelle automatisch...');
-
-        // Erstelle automatisch ein Profil
         final username = userEmail != null
             ? userEmail.split('@')[0]
             : 'Benutzer${DateTime.now().millisecondsSinceEpoch}';
-
         await _supabase.from('profiles').insert({
           'id': userId,
           'username': username,
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
-
-        debugPrint('Profil erfolgreich erstellt für: $username');
+        // ignore: avoid_print
+        print('Profil erfolgreich erstellt für: $username');
       } else {
-        debugPrint('Profil existiert bereits für User ID: $userId');
+        // ignore: avoid_print
+        print('Profil existiert bereits für User ID: $userId');
       }
     } catch (e) {
-      debugPrint('Fehler beim Überprüfen/Erstellen des Profils: $e');
+      // ignore: avoid_print
+      print('Fehler beim Überprüfen/Erstellen des Profils: $e');
       rethrow;
     }
   }
 
   Future<Plant> createPlant(Plant plant) async {
+    // Akzeptiert bereits das volle Plant-Objekt
     try {
-      // Stelle sicher, dass ein Profil existiert
       await _ensureProfileExists();
 
       final response = await _supabase
           .from('plants')
-          .insert(plant.toJson())
+          .insert(plant.toJson()) // plant.toJson() enthält bereits owner_name
           .select()
           .single();
       return Plant.fromJson(response);
     } catch (e) {
-      debugPrint('Error creating plant in repository: $e');
-
-      // Spezielle Behandlung für Foreign Key Constraint Fehler
+      // ignore: avoid_print
+      print('Error creating plant in repository: $e');
       if (e.toString().contains('plants_user_id_fkey')) {
-        debugPrint(
+        // ignore: avoid_print
+        print(
             'Foreign Key Constraint Fehler - Versuche Profil erneut zu erstellen...');
         await _ensureProfileExists();
-
-        // Erneuter Versuch
         try {
           final response = await _supabase
               .from('plants')
@@ -83,7 +79,8 @@ class PlantRepository {
               .single();
           return Plant.fromJson(response);
         } catch (retryError) {
-          debugPrint('Erneuter Versuch fehlgeschlagen: $retryError');
+          // ignore: avoid_print
+          print('Erneuter Versuch fehlgeschlagen: $retryError');
           rethrow;
         }
       }
@@ -93,19 +90,19 @@ class PlantRepository {
 
   Future<Plant> updatePlant(Plant plant) async {
     try {
-      // Stelle sicher, dass ein Profil existiert
       await _ensureProfileExists();
-
       final response = await _supabase
           .from('plants')
-          .update(plant.toJson())
+          .update(
+              plant.toJson()) // toJson() enthält auch owner_name für Updates
           .eq('id', plant.id)
           .eq('user_id', plant.userId)
           .select()
           .single();
       return Plant.fromJson(response);
     } catch (e) {
-      debugPrint('Error updating plant in repository: $e');
+      // ignore: avoid_print
+      print('Error updating plant in repository: $e');
       rethrow;
     }
   }
@@ -123,20 +120,19 @@ class PlantRepository {
 
       final publicUrl =
           _supabase.storage.from('plant-photos').getPublicUrl(storagePath);
-
-      debugPrint('Photo uploaded to: $publicUrl');
+      // ignore: avoid_print
+      print('Photo uploaded to: $publicUrl');
       return publicUrl;
     } catch (e) {
-      debugPrint('Error uploading photo to Supabase: $e');
+      // ignore: avoid_print
+      print('Error uploading photo to Supabase: $e');
       rethrow;
     }
   }
 
   Future<List<Plant>> getAllPlants() async {
     try {
-      // Stelle sicher, dass ein Profil existiert
       await _ensureProfileExists();
-
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
 
@@ -149,16 +145,15 @@ class PlantRepository {
           .map((json) => Plant.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error fetching plants: $e');
+      // ignore: avoid_print
+      print('Error fetching plants: $e');
       rethrow;
     }
   }
 
   Future<Plant?> getPlantById(String plantId) async {
     try {
-      // Stelle sicher, dass ein Profil existiert
       await _ensureProfileExists();
-
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
 
@@ -170,7 +165,8 @@ class PlantRepository {
           .single();
       return Plant.fromJson(response);
     } catch (e) {
-      debugPrint('Error fetching plant: $e');
+      // ignore: avoid_print
+      print('Error fetching plant: $e');
       return null;
     }
   }
@@ -185,7 +181,8 @@ class PlantRepository {
           .eq('id', plantId)
           .eq('user_id', userId);
     } catch (e) {
-      debugPrint('Error deleting plant: $e');
+      // ignore: avoid_print
+      print('Error deleting plant: $e');
       rethrow;
     }
   }
@@ -193,7 +190,6 @@ class PlantRepository {
   Future<List<Plant>> getPlantsByStatus(PlantStatus status) async {
     try {
       await _ensureProfileExists();
-
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
 
@@ -207,7 +203,8 @@ class PlantRepository {
           .map((json) => Plant.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error fetching plants by status: $e');
+      // ignore: avoid_print
+      print('Error fetching plants by status: $e');
       rethrow;
     }
   }
@@ -215,7 +212,6 @@ class PlantRepository {
   Future<List<Plant>> getPlantsByType(PlantType type) async {
     try {
       await _ensureProfileExists();
-
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
 
@@ -229,7 +225,8 @@ class PlantRepository {
           .map((json) => Plant.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error fetching plants by type: $e');
+      // ignore: avoid_print
+      print('Error fetching plants by type: $e');
       rethrow;
     }
   }
@@ -245,7 +242,8 @@ class PlantRepository {
           .map((json) => Harvest.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error fetching harvests: $e');
+      // ignore: avoid_print
+      print('Error fetching harvests: $e');
       rethrow;
     }
   }
@@ -259,7 +257,8 @@ class PlantRepository {
           .single();
       return Harvest.fromJson(response);
     } catch (e) {
-      debugPrint('Error saving harvest: $e');
+      // ignore: avoid_print
+      print('Error saving harvest: $e');
       rethrow;
     }
   }
@@ -267,7 +266,6 @@ class PlantRepository {
   Future<Map<PlantStatus, int>> getPlantCountsByStatus() async {
     try {
       await _ensureProfileExists();
-
       final userId = SupabaseService.currentUserId;
       if (userId == null) throw Exception('User not authenticated');
 
@@ -278,7 +276,8 @@ class PlantRepository {
       }
       return counts;
     } catch (e) {
-      debugPrint('Error fetching plant counts: $e');
+      // ignore: avoid_print
+      print('Error fetching plant counts: $e');
       rethrow;
     }
   }

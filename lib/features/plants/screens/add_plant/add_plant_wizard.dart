@@ -4,23 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../data/models/plant.dart'; // Brauchen wir für Enums
+import '../../../../data/models/plant.dart';
 import '../../controllers/plant_controller.dart';
 import 'steps/basic_info_step.dart';
 import 'steps/cultivation_details_step.dart';
 import 'steps/photo_step.dart';
 import 'steps/confirmation_step.dart';
 
-// AddPlantData ist jetzt hier definiert und verwendet documentationStartDate
 class AddPlantData {
   final String? name;
+  final String? ownerName; // NEU
   final PlantType? plantType;
   final PlantStatus? initialStatus;
   final String? strain;
   final String? breeder;
   final DateTime? seedDate;
   final DateTime? germinationDate;
-  final DateTime? documentationStartDate; // Umbenannt und zentral
+  final DateTime? documentationStartDate;
   final PlantMedium? medium;
   final PlantLocation? location;
   final int? estimatedHarvestDays;
@@ -29,6 +29,7 @@ class AddPlantData {
 
   AddPlantData({
     this.name,
+    this.ownerName, // NEU
     this.plantType,
     this.initialStatus,
     this.strain,
@@ -43,27 +44,20 @@ class AddPlantData {
     this.photoPath,
   });
 
-  // Validierung für den ersten Schritt (Basis-Informationen)
   bool get isBasicInfoComplete =>
       name != null &&
       name!.isNotEmpty &&
-      plantType != null && // Jetzt Auswahl über Kachel
-      initialStatus != null && // Jetzt Auswahl über Kachel
+      plantType != null &&
+      initialStatus != null &&
       strain != null &&
       strain!.isNotEmpty;
 
-  // Validierung für den zweiten Schritt (Anbau-Details)
   bool get isCultivationComplete =>
-      documentationStartDate != null &&
-      medium != null && // Jetzt Auswahl über Kachel
-      location != null; // Jetzt Auswahl über Kachel
+      documentationStartDate != null && medium != null && location != null;
 
-  // Gesamtvalidierung, bevor eine Pflanze erstellt werden kann
   bool get isReadyToCreate => isBasicInfoComplete && isCultivationComplete;
 
-  // Stellt sicher, dass immer ein Datum für die Erstellung der Pflanze vorhanden ist
   DateTime get effectiveDocumentationDate {
-    // Priorität: Aussaat, dann Keimung, dann Doku-Start (falls gesetzt), sonst heute
     if (seedDate != null) return seedDate!;
     if (germinationDate != null) return germinationDate!;
     if (documentationStartDate != null) return documentationStartDate!;
@@ -72,6 +66,8 @@ class AddPlantData {
 
   AddPlantData copyWith({
     String? name,
+    String? ownerName, // NEU
+    bool setOwnerNameNull = false, // NEU
     PlantType? plantType,
     PlantStatus? initialStatus,
     String? strain,
@@ -93,6 +89,7 @@ class AddPlantData {
   }) {
     return AddPlantData(
       name: name ?? this.name,
+      ownerName: setOwnerNameNull ? null : (ownerName ?? this.ownerName), // NEU
       plantType: plantType ?? this.plantType,
       initialStatus: initialStatus ?? this.initialStatus,
       strain: strain ?? this.strain,
@@ -143,8 +140,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
   }
 
   void _nextStep() {
-    // Formular-Validierung explizit aufrufen, falls ein FormKey pro Step existiert
-    // Hier gehen wir davon aus, dass die Validierung im `_canProceed` behandelt wird.
     if (_currentStep < _stepTitles.length - 1) {
       setState(() => _currentStep++);
       _pageController.animateToPage(
@@ -186,6 +181,7 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
       final controller = ref.read(plantControllerProvider.notifier);
       final plant = await controller.createPlant(
         name: data.name!,
+        ownerName: data.ownerName, // NEU
         plantType: data.plantType!,
         strain: data.strain!,
         breeder: data.breeder,
@@ -207,8 +203,10 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             backgroundColor: AppColors.successColor,
           ),
         );
-        ref.read(addPlantDataProvider.notifier).state = AddPlantData();
-        context.goNamed('dashboard');
+        ref.read(addPlantDataProvider.notifier).state =
+            AddPlantData(); // Reset data
+        // Navigiere zur Detailseite der neu erstellten Pflanze
+        context.goNamed('plant_detail', pathParameters: {'plantId': plant.id});
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -241,9 +239,9 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         return data.isBasicInfoComplete;
       case 1:
         return data.isCultivationComplete;
-      case 2: // Foto-Seite
-        return true; // Kann immer übersprungen werden
-      case 3: // Bestätigungsseite
+      case 2:
+        return true;
+      case 3:
         return data.isReadyToCreate;
       default:
         return false;
@@ -252,15 +250,11 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
 
   @override
   Widget build(BuildContext context) {
-    // Die Variable 'data' wird hier nicht mehr benötigt, da _canProceed()
-    // den Provider direkt überwacht.
-
-    // Umrechnung von Opacity (0.0 - 1.0) zu Alpha (0 - 255)
     final int footerBoxShadowAlpha = (0.2 * 255).round();
     final int primaryColorBorderAlpha = (0.5 * 255).round();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50, // Heller Hintergrund für den Body
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           'Neue Pflanze (${_currentStep + 1}/${_stepTitles.length})',
@@ -273,7 +267,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () {
-            // Dialog anzeigen, ob der Benutzer wirklich abbrechen möchte
             showDialog(
               context: context,
               builder: (dialogContext) => AlertDialog(
@@ -287,13 +280,16 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.of(dialogContext).pop(); // Dialog schließen
+                      Navigator.of(dialogContext).pop();
                       ref.read(addPlantDataProvider.notifier).state =
                           AddPlantData();
                       context.goNamed('dashboard');
                     },
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.errorColor),
+                        backgroundColor: AppColors.errorColor,
+                        foregroundColor:
+                            Colors.white // Für Textfarbe auf rotem Button
+                        ),
                     child: const Text('Abbrechen & Verwerfen'),
                   ),
                 ],
@@ -305,11 +301,10 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
       body: Column(
         children: [
           Material(
-            // Material für den Schatten
-            elevation: 1, // Leichter Schatten unter dem Header
+            elevation: 1,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              color: Colors.white, // Weißer Hintergrund für den Header-Bereich
+              color: Colors.white,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -326,7 +321,7 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
                     backgroundColor: Colors.grey.shade200,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.primaryColor),
-                    minHeight: 6, // Etwas dickerer Fortschrittsbalken
+                    minHeight: 6,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ],
@@ -338,8 +333,6 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (index) {
-                // Wird nicht direkt genutzt wegen NeverScrollableScrollPhysics,
-                // aber gut für zukünftige Änderungen.
                 setState(() {
                   _currentStep = index;
                 });
@@ -353,14 +346,12 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
             ),
           ),
           Container(
-            // Footer für Buttons
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(
-                      footerBoxShadowAlpha), // Verwendung der Alpha-Variable
+                  color: Colors.grey.withAlpha(footerBoxShadowAlpha),
                   spreadRadius: 0,
                   blurRadius: 10,
                   offset: const Offset(0, -3),
@@ -380,8 +371,8 @@ class _AddPlantWizardState extends ConsumerState<AddPlantWizard> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         foregroundColor: AppColors.primaryColor,
                         side: BorderSide(
-                            color: AppColors.primaryColor.withAlpha(
-                                primaryColorBorderAlpha)), // Verwendung der Alpha-Variable
+                            color: AppColors.primaryColor
+                                .withAlpha(primaryColorBorderAlpha)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),

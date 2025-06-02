@@ -37,9 +37,18 @@ dependencies:
   google_sign_in: ^6.1.5
   flutter_riverpod: ^2.4.9
   go_router: ^15.1.2
-  intl: ^0.19.0 # Oder eine andere aktuelle Version  # Für Datumsformatierung
+  intl: ^0.20.2 # Oder eine andere aktuelle Version  # Für Datumsformatierung
   shared_preferences: ^2.2.2 # Für lokale Einstellungen-Speicherung
 
+  # QR-Code & PDF & Teilen & Berechtigungen
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.0.0 # Aktuelle Version prüfen
+  pdf: ^3.10.8 # Aktuelle Version prüfen
+  printing: ^5.11.1 # Aktuelle Version prüfen
+  share_plus: ^11.0.0 # Aktuelle Version prüfen
+  path_provider: ^2.1.3 # Aktuelle Version prüfen
+  permission_handler: ^12.0.0+1 # Aktuelle Version prüfen
+  
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -54,7 +63,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,6 +75,14 @@ flutter:
     - .env
     - assets/images/
     - assets/icons/
+    - assets/fonts/ # Hinzufügen
+
+  fonts: # Ggf. hier auch deklarieren, wenn du sie global nutzen willst
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:
