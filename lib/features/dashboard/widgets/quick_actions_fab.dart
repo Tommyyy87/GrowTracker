@@ -6,8 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/plant.dart';
 import '../../plants/controllers/plant_controller.dart';
-// NEUER Import für SupabaseService
+// KORREKTUR: Fehlender Import für SupabaseService
 import '../../../data/services/supabase_service.dart';
+
 
 class QuickActionsFab extends ConsumerStatefulWidget {
   const QuickActionsFab({super.key});
@@ -79,9 +80,8 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
               child: AnimatedOpacity(
                 opacity: _isExpanded ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 250),
-                // KORREKTUR: withAlpha statt withOpacity
-                child: Container(
-                    color: Colors.black.withAlpha((0.5 * 255).round())),
+                // KORREKTUR: .withAlpha() verwenden
+                child: Container(color: Colors.black.withAlpha((0.5 * 255).round())),
               ),
             ),
           ),
@@ -97,8 +97,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                 children: [
                   if (_isExpanded)
                     _buildActionButton(
-                      onTap: () =>
-                          _onActionTap(() => context.goNamed('qr_scanner')),
+                      onTap: () => _onActionTap(() => context.goNamed('qr_scanner')),
                       icon: Icons.qr_code_scanner_rounded,
                       label: 'QR-Code scannen',
                       color: Colors.purple.shade500,
@@ -124,19 +123,17 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                       index: 2,
                     ),
                   if (_isExpanded)
+                     _buildActionButton(
+                       onTap: () => _onActionTap(() => _quickStatusUpdate(context)),
+                       icon: Icons.update,
+                       label: 'Status ändern',
+                       color: Colors.green.shade600,
+                       animationValue: _expandAnimation.value,
+                       index: 3,
+                     ),
+                   if (_isExpanded)
                     _buildActionButton(
-                      onTap: () =>
-                          _onActionTap(() => _quickStatusUpdate(context)),
-                      icon: Icons.update,
-                      label: 'Status ändern',
-                      color: Colors.green.shade600,
-                      animationValue: _expandAnimation.value,
-                      index: 3,
-                    ),
-                  if (_isExpanded)
-                    _buildActionButton(
-                      onTap: () =>
-                          _onActionTap(() => context.goNamed('add_plant')),
+                      onTap: () => _onActionTap(() => context.goNamed('add_plant')),
                       icon: Icons.add_circle,
                       label: 'Neue Pflanze',
                       color: AppColors.primaryColor,
@@ -149,9 +146,8 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          // KORREKTUR: withAlpha statt withOpacity
-                          color: AppColors.primaryColor
-                              .withAlpha((0.3 * 255).round()),
+                          // KORREKTUR: .withAlpha() verwenden
+                          color: AppColors.primaryColor.withAlpha((0.3 * 255).round()),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -189,7 +185,9 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     required double animationValue,
     required int index,
   }) {
-    final double scale = Tween<double>(begin: 0.0, end: 1.0)
+    final double scale = Tween<double>(
+            begin: 0.0,
+            end: 1.0)
         .animate(CurvedAnimation(
             parent: _animationController,
             curve: Interval((index * 0.1), 1.0, curve: Curves.easeOut)))
@@ -208,21 +206,20 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
             children: [
               if (animationValue > 0.7)
                 FadeTransition(
-                  opacity: Tween<double>(begin: 0.0, end: 1.0)
-                      .animate(CurvedAnimation(
-                    parent: _animationController,
-                    curve: Interval(0.7 + (index * 0.05), 1.0,
-                        curve: Curves.easeIn),
-                  )),
+                  opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: _animationController,
+                      curve: Interval(0.7 + (index * 0.05), 1.0, curve: Curves.easeIn),
+                    )
+                  ),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          // KORREKTUR: withAlpha statt withOpacity
+                          // KORREKTUR: .withAlpha() verwenden
                           color: Colors.black.withAlpha((0.1 * 255).round()),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
@@ -255,73 +252,59 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
     );
   }
 
+  // KORREKTUR: mounted Checks für alle _quick... Methoden
   void _quickPhoto(BuildContext context) {
-    // context hier übergeben
     final plantsAsync = ref.read(plantsProvider);
     plantsAsync.when(
       data: (plants) async {
-        if (!mounted) return; // mounted check HINZUGEFÜGT
+        if (!mounted) return;
         if (plants.isEmpty) {
           _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
           return;
         }
-        final selectedPlant = await _showPlantSelection(
-            context, plants, 'Foto für welche Pflanze?');
-        if (!mounted) return; // mounted check HINZUGEFÜGT
+        final selectedPlant = await _showPlantSelection(context, plants, 'Foto für welche Pflanze?');
+        if (!mounted) return;
         if (selectedPlant != null) {
           final controller = ref.read(plantControllerProvider.notifier);
           final photoPath = await controller.takePlantPhoto();
-          if (!mounted) return; // mounted check HINZUGEFÜGT
+          if (!mounted) return;
           if (photoPath != null) {
-            _showMessage(
-                context, 'Foto für ${selectedPlant.name} wird verarbeitet...');
-            final userId = SupabaseService
-                .currentUserId; // SupabaseService jetzt verfügbar
+            _showMessage(context, 'Foto für ${selectedPlant.name} wird verarbeitet...');
+            final userId = SupabaseService.currentUserId;
             if (userId == null) {
-              if (!mounted) return; // mounted check HINZUGEFÜGT
-              _showMessage(context, 'Benutzer nicht angemeldet.',
-                  isError: true);
-              return;
+                if (!mounted) return;
+                 _showMessage(context, 'Benutzer nicht angemeldet.', isError: true);
+                return;
             }
             try {
-              final uploadedPhotoUrl = await ref
-                  .read(plantRepositoryProvider)
-                  .uploadPlantPhoto(userId, selectedPlant.id, photoPath);
-              final updatedPlant =
-                  selectedPlant.copyWith(photoUrl: () => uploadedPhotoUrl);
-              await controller.updatePlant(updatedPlant);
-              if (mounted) {
-                // mounted check HINZUGEFÜGT
-                _showMessage(context, 'Foto erfolgreich hinzugefügt!');
-                context.goNamed('plant_detail',
-                    pathParameters: {'plantId': selectedPlant.id});
-              }
+                final uploadedPhotoUrl = await ref.read(plantRepositoryProvider).uploadPlantPhoto(userId, selectedPlant.id, photoPath);
+                final updatedPlant = selectedPlant.copyWith(photoUrl: () => uploadedPhotoUrl);
+                await controller.updatePlant(updatedPlant);
+                if(mounted){
+                    _showMessage(context, 'Foto erfolgreich hinzugefügt!');
+                    context.goNamed('plant_detail', pathParameters: {'plantId': selectedPlant.id});
+                }
             } catch (e) {
-              if (mounted) {
-                // mounted check HINZUGEFÜGT
-                _showMessage(context, 'Fehler beim Hochladen des Fotos: $e',
-                    isError: true);
-              }
+                if (mounted) {
+                    _showMessage(context, 'Fehler beim Hochladen des Fotos: $e', isError: true);
+                }
             }
           } else {
-            if (!mounted) return; // mounted check HINZUGEFÜGT
-            _showMessage(context, 'Kein Foto aufgenommen/ausgewählt.');
+             if (!mounted) return;
+             _showMessage(context, 'Kein Foto aufgenommen/ausgewählt.');
           }
         }
       },
       loading: () {
-        // Keine asynchrone Operation, kein BuildContext-Problem
-        _showMessage(context, 'Pflanzen werden geladen...');
+          if (mounted) _showMessage(context, 'Pflanzen werden geladen...');
       },
       error: (_, __) {
-        // Keine asynchrone Operation, kein BuildContext-Problem
-        _showMessage(context, 'Fehler beim Laden der Pflanzen', isError: true);
+          if (mounted) _showMessage(context, 'Fehler beim Laden der Pflanzen', isError: true);
       },
     );
   }
 
   void _quickNote(BuildContext context) {
-    // context hier übergeben
     final plantsAsync = ref.read(plantsProvider);
     plantsAsync.when(
       data: (plants) async {
@@ -330,25 +313,24 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
           _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
           return;
         }
-        final selectedPlant = await _showPlantSelection(
-            context, plants, 'Notiz für welche Pflanze?');
+        final selectedPlant = await _showPlantSelection(context, plants, 'Notiz für welche Pflanze?');
         if (!mounted) return;
         if (selectedPlant != null) {
-          context.goNamed('plant_detail',
-              pathParameters: {'plantId': selectedPlant.id});
-          _showMessage(
-              context, 'Öffne Details für ${selectedPlant.name} zum Notieren.');
+          context.goNamed('plant_detail', pathParameters: {'plantId': selectedPlant.id});
+           _showMessage(context, 'Öffne Details für ${selectedPlant.name} zum Notieren.');
         }
       },
-      loading: () => _showMessage(context, 'Pflanzen werden geladen...'),
-      error: (_, __) => _showMessage(context, 'Fehler beim Laden der Pflanzen',
-          isError: true),
+      loading: () {
+          if (mounted) _showMessage(context, 'Pflanzen werden geladen...');
+      },
+      error: (_, __) {
+          if (mounted) _showMessage(context, 'Fehler beim Laden der Pflanzen', isError: true);
+      },
     );
   }
 
   void _quickStatusUpdate(BuildContext context) {
-    // context hier übergeben
-    final plantsAsync = ref.read(plantsProvider);
+     final plantsAsync = ref.read(plantsProvider);
     plantsAsync.when(
       data: (plants) async {
         if (!mounted) return;
@@ -356,56 +338,55 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
           _showMessage(context, 'Erstelle zuerst eine Pflanze!', isError: true);
           return;
         }
-        final selectedPlant = await _showPlantSelection(
-            context, plants, 'Status für welche Pflanze ändern?');
+        final selectedPlant = await _showPlantSelection(context, plants, 'Status für welche Pflanze ändern?');
         if (!mounted) return;
         if (selectedPlant != null) {
-          context.goNamed('plant_detail',
-              pathParameters: {'plantId': selectedPlant.id});
-          _showMessage(context,
-              'Öffne Details für ${selectedPlant.name} zur Statusänderung.');
+          context.goNamed('plant_detail', pathParameters: {'plantId': selectedPlant.id});
+           _showMessage(context, 'Öffne Details für ${selectedPlant.name} zur Statusänderung.');
         }
       },
-      loading: () => _showMessage(context, 'Pflanzen werden geladen...'),
-      error: (_, __) => _showMessage(context, 'Fehler beim Laden der Pflanzen',
-          isError: true),
+      loading: () {
+          if (mounted) _showMessage(context, 'Pflanzen werden geladen...');
+      },
+      error: (_, __) {
+          if (mounted) _showMessage(context, 'Fehler beim Laden der Pflanzen', isError: true);
+      },
     );
   }
 
-  void _showMessage(BuildContext context, String message,
-      {bool isError = false}) {
-    // mounted Check ist hier nicht nötig, da _showMessage synchron aufgerufen wird
-    // von Methoden, die bereits einen mounted Check haben oder synchron sind.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? AppColors.errorColor : null,
-      ),
-    );
+  void _showMessage(BuildContext context, String message, {bool isError = false}) {
+    // Der mounted Check ist hier kritisch, da _showMessage aus async Callbacks aufgerufen wird.
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? AppColors.errorColor : null,
+        ),
+      );
+    }
   }
 
-  Future<Plant?> _showPlantSelection(
-      BuildContext context, List<Plant> plants, String title) async {
+  Future<Plant?> _showPlantSelection(BuildContext context, List<Plant> plants, String title) async {
     final sortedPlants = List<Plant>.from(plants);
     sortedPlants.sort((a, b) {
-      final aIsActive = a.status != PlantStatus.completed;
-      final bIsActive = b.status != PlantStatus.completed;
-      if (aIsActive && !bIsActive) return -1;
-      if (!aIsActive && bIsActive) return 1;
-      return b.updatedAt.compareTo(a.updatedAt);
+        final aIsActive = a.status != PlantStatus.completed;
+        final bIsActive = b.status != PlantStatus.completed;
+        if (aIsActive && !bIsActive) return -1;
+        if (!aIsActive && bIsActive) return 1;
+        return b.updatedAt.compareTo(a.updatedAt);
     });
 
+    // mounted Check vor showModalBottomSheet
+    if (!mounted) return null;
     return await showModalBottomSheet<Plant>(
-      context: context,
+      context: context, // Verwende den übergebenen, geprüften context
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        constraints:
-            BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -414,23 +395,16 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
               margin: const EdgeInsets.only(top: 12, bottom: 12),
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(title,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold)),
+              child: Text(title, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             ),
             if (plants.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(32.0),
-                child: Text("Keine Pflanzen vorhanden.",
-                    style: TextStyle(color: Colors.grey.shade600)),
+                child: Text("Keine Pflanzen vorhanden.", style: TextStyle(color: Colors.grey.shade600)),
               )
             else
               Flexible(
@@ -438,8 +412,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                   shrinkWrap: true,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: sortedPlants.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
+                  separatorBuilder: (context, index) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final plant = sortedPlants[index];
                     final isActive = plant.status != PlantStatus.completed;
@@ -449,31 +422,20 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          // KORREKTUR: withAlpha statt withOpacity
-                          color: Color(int.parse(plant.statusColor.substring(1),
-                                      radix: 16) +
-                                  0xFF000000)
-                              .withAlpha((0.1 * 255).round()),
+                          // KORREKTUR: .withAlpha() verwenden
+                          color: Color(int.parse(plant.statusColor.substring(1), radix: 16) + 0xFF000000).withAlpha((0.1 * 255).round()),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.eco_rounded,
-                          color: Color(int.parse(plant.statusColor.substring(1),
-                                  radix: 16) +
-                              0xFF000000),
+                          color: Color(int.parse(plant.statusColor.substring(1), radix: 16) + 0xFF000000),
                           size: 24,
                         ),
                       ),
-                      title: Text(plant.name,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isActive
-                                  ? Colors.black87
-                                  : Colors.grey.shade600)),
+                      title: Text(plant.name, style: TextStyle(fontWeight: FontWeight.w600, color: isActive ? Colors.black87 : Colors.grey.shade600)),
                       subtitle: Text(
                         '${plant.strain} • ${plant.status.displayName}',
-                        style: TextStyle(
-                            color: Colors.grey.shade600, fontSize: 13),
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () => Navigator.of(ctx).pop(plant),
@@ -489,7 +451,10 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    context.goNamed('add_plant');
+                    // Erneut `mounted` Check für den äußeren Context
+                    if (mounted) {
+                        context.goNamed('add_plant');
+                    }
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Neue Pflanze hinzufügen'),

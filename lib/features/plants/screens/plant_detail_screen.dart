@@ -229,7 +229,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                     );
-                  }).toList(),
+                  }),
                   const SizedBox(height: 16),
                   const Text('Vorschau (schematisch):'),
                   const SizedBox(height: 4),

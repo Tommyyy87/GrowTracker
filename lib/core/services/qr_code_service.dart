@@ -8,11 +8,13 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart'; // Importiert die Klasse Share
+import 'package:share_plus/share_plus.dart'; // Standard-Import für share_plus
 import 'package:flutter/services.dart' show rootBundle;
 
 // WICHTIG: Stelle sicher, dass dieser Pfad korrekt ist und die Datei
 // lib/core/constants/app_strings.dart existiert und eine Klasse AppStrings enthält!
+// Der Pfad '../constants/app_strings.dart' ist korrekt, wenn qr_code_service.dart
+// in lib/core/services/ und app_strings.dart in lib/core/constants/ liegt.
 import '../constants/app_strings.dart';
 import '../../../data/models/plant.dart';
 
@@ -84,6 +86,8 @@ class QrCodeService {
 
     try {
       final tempDir = await getTemporaryDirectory();
+      // Verwendung von AppStrings. Wenn der Fehler weiterhin besteht,
+      // liegt es an der lokalen Dateistruktur oder IDE-Cache.
       final fileName =
           '${AppStrings.appName}_QR_${_sanitizeFileName(plant.name)}_${plant.displayId}.png';
       final file = File('${tempDir.path}/$fileName');
@@ -223,6 +227,7 @@ class QrCodeService {
     final pdfBytes = await generatePlantLabelPdf(plant, selectedFields);
     try {
       final tempDir = await getTemporaryDirectory();
+      // Verwendung von AppStrings
       final fileName =
           '${AppStrings.appName}_Label_${_sanitizeFileName(plant.name)}_${plant.displayId}.pdf';
       final file = File('${tempDir.path}/$fileName');
