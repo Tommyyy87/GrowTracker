@@ -1,6 +1,6 @@
-// lib/features/dashboard/widgets/dashboard_header.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../data/services/supabase_service.dart';
 import '../../plants/controllers/plant_controller.dart';
@@ -44,21 +44,24 @@ class DashboardHeader extends ConsumerWidget {
           Row(
             children: [
               // Avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 1,
+              GestureDetector(
+                onTap: () => context.pushNamed('profile'),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(51),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withAlpha(77),
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.eco_rounded,
-                  color: Colors.white,
-                  size: 24,
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
               ),
 
@@ -142,10 +145,10 @@ class DashboardHeader extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withAlpha(38),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withAlpha(51),
                   ),
                 ),
                 child: Row(
@@ -175,7 +178,7 @@ class DashboardHeader extends ConsumerWidget {
                     if (needsAttention > 0)
                       Icon(
                         Icons.arrow_forward_ios,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Colors.white.withAlpha(179),
                         size: 14,
                       ),
                   ],

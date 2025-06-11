@@ -1,4 +1,3 @@
-// lib/features/auth/screens/welcome_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -58,13 +57,13 @@ class WelcomeScreen extends StatelessWidget {
                   children: [
                     AuthButton(
                       text: AppStrings.loginButton,
-                      onPressed: () => context.goNamed('login'),
+                      onPressed: () => context.pushNamed('login'),
                       isPrimary: false,
                     ),
                     const SizedBox(height: 16),
                     AuthButton(
                       text: AppStrings.registerButton,
-                      onPressed: () => context.goNamed('register'),
+                      onPressed: () => context.pushNamed('register'),
                     ),
                     const SizedBox(height: 32),
                     // Auskommentiert, um "Überspringen" zu entfernen, wie vom Benutzer gewünscht

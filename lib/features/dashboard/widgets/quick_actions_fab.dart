@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/quick_actions_fab.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -78,8 +77,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
               child: AnimatedOpacity(
                 opacity: _isExpanded ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 250),
-                child: Container(
-                    color: Colors.black.withAlpha((0.5 * 255).round())),
+                child: Container(color: Colors.black.withAlpha(128)),
               ),
             ),
           ),
@@ -96,7 +94,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                   if (_isExpanded)
                     _buildActionButton(
                       onTap: () =>
-                          _onActionTap(() => context.goNamed('qr_scanner')),
+                          _onActionTap(() => context.pushNamed('qr_scanner')),
                       icon: Icons.qr_code_scanner_rounded,
                       label: 'QR-Code scannen',
                       color: Colors.purple.shade500,
@@ -133,7 +131,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                   if (_isExpanded)
                     _buildActionButton(
                       onTap: () =>
-                          _onActionTap(() => context.goNamed('add_plant')),
+                          _onActionTap(() => context.pushNamed('add_plant')),
                       icon: Icons.add_circle,
                       label: 'Neue Pflanze',
                       color: AppColors.primaryColor,
@@ -146,8 +144,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryColor
-                              .withAlpha((0.3 * 255).round()),
+                          color: AppColors.primaryColor.withAlpha(77),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -204,12 +201,11 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
             children: [
               if (animationValue > 0.7)
                 FadeTransition(
-                  opacity: Tween<double>(begin: 0.0, end: 1.0)
-                      .animate(CurvedAnimation(
-                    parent: _animationController,
-                    curve: Interval(0.7 + (index * 0.05), 1.0,
-                        curve: Curves.easeIn),
-                  )),
+                  opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                      CurvedAnimation(
+                          parent: _animationController,
+                          curve: Interval(0.7 + (index * 0.05), 1.0,
+                              curve: Curves.easeIn))),
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -218,7 +214,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha((0.1 * 255).round()),
+                          color: Colors.black.withAlpha(26),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -288,7 +284,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
           await controller.updatePlant(updatedPlant);
           if (mounted) {
             _showMessage('Foto erfolgreich hinzugefügt!');
-            context.goNamed('plant_detail',
+            context.pushNamed('plant_detail',
                 pathParameters: {'plantId': selectedPlant.id});
           }
         } catch (e) {
@@ -324,7 +320,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
         if (!mounted || selectedPlant == null) return;
 
         _showMessage('Öffne Details für ${selectedPlant.name} zum Notieren.');
-        context.goNamed('plant_detail',
+        context.pushNamed('plant_detail',
             pathParameters: {'plantId': selectedPlant.id});
       },
       loading: () {
@@ -355,7 +351,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
 
         _showMessage(
             'Öffne Details für ${selectedPlant.name} zur Statusänderung.');
-        context.goNamed('plant_detail',
+        context.pushNamed('plant_detail',
             pathParameters: {'plantId': selectedPlant.id});
       },
       loading: () {
@@ -450,7 +446,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                           color: Color(int.parse(plant.statusColor.substring(1),
                                       radix: 16) +
                                   0xFF000000)
-                              .withAlpha((0.1 * 255).round()),
+                              .withAlpha(26),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -487,7 +483,7 @@ class _QuickActionsFabState extends ConsumerState<QuickActionsFab>
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     if (mounted) {
-                      context.goNamed('add_plant');
+                      context.pushNamed('add_plant');
                     }
                   },
                   icon: const Icon(Icons.add),

@@ -1,4 +1,3 @@
-// lib/features/profile/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,7 +61,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.black87),
-            onPressed: () => context.goNamed('settings'),
+            onPressed: () => context.pushNamed('settings'),
           ),
           PopupMenuButton<String>(
             onSelected: (value) => _handleMenuAction(value),
@@ -255,19 +254,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            color.withValues(alpha: 0.1),
-            color.withValues(alpha: 0.05),
+            color.withAlpha(26),
+            color.withAlpha(13),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withAlpha(77)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color.withAlpha(51),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -277,8 +276,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Text(
               message,
               style: TextStyle(
-                color: color.withValues(
-                    alpha: 0.8), // FIXED: Ersetzt shade700 mit withValues
+                color: color.withAlpha(204),
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -315,7 +313,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Profil bearbeiten',
                     Icons.edit,
                     AppColors.primaryColor,
-                    () => context.goNamed('edit_profile'),
+                    () => context.pushNamed('edit_profile'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -324,7 +322,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Einstellungen',
                     Icons.settings,
                     Colors.blue,
-                    () => context.goNamed('settings'),
+                    () => context.pushNamed('settings'),
                   ),
                 ),
               ],
@@ -337,7 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     'Account verwalten',
                     Icons.manage_accounts,
                     Colors.orange,
-                    () => context.goNamed('account_management'),
+                    () => context.pushNamed('account_management'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -365,9 +363,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withAlpha(26),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withAlpha(51)),
         ),
         child: Column(
           children: [
@@ -394,7 +392,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _refreshStatistics();
         break;
       case 'account':
-        context.goNamed('account_management');
+        context.pushNamed('account_management');
         break;
     }
   }

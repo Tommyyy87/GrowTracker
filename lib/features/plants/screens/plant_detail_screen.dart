@@ -1,4 +1,3 @@
-// lib/features/plants/screens/plant_detail_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -292,7 +291,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
           foregroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.goNamed('dashboard'),
+            onPressed: () => context.pop(),
           ),
           actions: [
             IconButton(

@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/current_grows_section.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +70,7 @@ class CurrentGrowsSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withAlpha(13),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -174,7 +173,7 @@ class CurrentGrowsSection extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => context.goNamed('add_plant'),
+              onPressed: () => context.pushNamed('add_plant'),
               icon: const Icon(Icons.add),
               label: const Text('Ersten Grow starten'),
               style: ElevatedButton.styleFrom(
@@ -236,14 +235,14 @@ class _PlantGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context
-          .goNamed('plant_detail', pathParameters: {'plantId': plant.id}),
+          .pushNamed('plant_detail', pathParameters: {'plantId': plant.id}),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
+              color: Colors.black.withAlpha(20),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -280,7 +279,7 @@ class _PlantGridCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withAlpha(230),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -404,7 +403,7 @@ class _PlantGridCard extends StatelessWidget {
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: _getHealthColor().withValues(alpha: 0.2),
+        color: _getHealthColor().withAlpha(51),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -455,7 +454,7 @@ class _PlantListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => context
-          .goNamed('plant_detail', pathParameters: {'plantId': plant.id}),
+          .pushNamed('plant_detail', pathParameters: {'plantId': plant.id}),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -463,7 +462,7 @@ class _PlantListCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withAlpha(13),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -519,7 +518,7 @@ class _PlantListCard extends StatelessWidget {
                           color: Color(int.parse(plant.statusColor.substring(1),
                                       radix: 16) +
                                   0xFF000000)
-                              .withValues(alpha: 0.1),
+                              .withAlpha(26),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -563,7 +562,7 @@ class _PlantListCard extends StatelessWidget {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: _getHealthColor().withValues(alpha: 0.2),
+                    color: _getHealthColor().withAlpha(51),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

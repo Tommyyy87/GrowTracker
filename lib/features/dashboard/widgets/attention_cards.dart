@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/attention_cards.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -134,7 +133,7 @@ class AttentionCards extends StatelessWidget {
               return _AttentionCard(
                 plant: plant,
                 attentionType: attentionType,
-                onTap: () => context.goNamed('plant_detail',
+                onTap: () => context.pushNamed('plant_detail',
                     pathParameters: {'plantId': plant.id}),
               );
             },
