@@ -1,4 +1,3 @@
-// lib/features/settings/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -153,14 +152,16 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: 'Benutzername, Bio und Avatar ändern',
                   icon: Icons.person_outline,
                   type: SettingsTileType.navigation,
-                  onTap: () => context.goNamed('edit_profile'),
+                  // KORREKTUR 1: goNamed -> pushNamed
+                  onTap: () => context.pushNamed('edit_profile'),
                 ),
                 SettingsTile(
                   title: 'Account verwalten',
                   subtitle: 'Passwort, E-Mail und Sicherheit',
                   icon: Icons.manage_accounts_outlined,
                   type: SettingsTileType.navigation,
-                  onTap: () => context.goNamed('account_management'),
+                  // KORREKTUR 2: goNamed -> pushNamed
+                  onTap: () => context.pushNamed('account_management'),
                 ),
                 SettingsTile(
                   title: 'Biometrische Anmeldung',

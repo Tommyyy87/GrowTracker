@@ -1,4 +1,3 @@
-// lib/features/profile/widgets/profile_header.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +35,7 @@ class ProfileHeader extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryColor.withValues(alpha: 0.3),
+            color: AppColors.primaryColor.withAlpha(77),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -54,12 +53,12 @@ class ProfileHeader extends ConsumerWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: Colors.white.withAlpha(77),
                     width: 3,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withAlpha(51),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -93,7 +92,7 @@ class ProfileHeader extends ConsumerWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withAlpha(26),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -127,7 +126,7 @@ class ProfileHeader extends ConsumerWidget {
             Text(
               profile.bio!,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
+                color: Colors.white.withAlpha(230),
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -140,10 +139,10 @@ class ProfileHeader extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withAlpha(38),
               borderRadius: BorderRadius.circular(25),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withAlpha(51),
               ),
             ),
             child: Column(
@@ -155,7 +154,7 @@ class ProfileHeader extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withAlpha(51),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Text(
@@ -171,7 +170,7 @@ class ProfileHeader extends ConsumerWidget {
                     Text(
                       profile.rankTitle,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withAlpha(230),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -187,14 +186,14 @@ class ProfileHeader extends ConsumerWidget {
                         Text(
                           '${profile.experience} XP',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withAlpha(204),
                             fontSize: 12,
                           ),
                         ),
                         Text(
                           '${profile.experienceToNextLevel} bis Level ${profile.level + 1}',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withAlpha(204),
                             fontSize: 12,
                           ),
                         ),
@@ -205,7 +204,7 @@ class ProfileHeader extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         value: profile.levelProgress,
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        backgroundColor: Colors.white.withAlpha(51),
                         valueColor:
                             const AlwaysStoppedAnimation<Color>(Colors.white),
                         minHeight: 6,
@@ -223,10 +222,10 @@ class ProfileHeader extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
+                color: Colors.amber.withAlpha(51),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Colors.amber.withValues(alpha: 0.3),
+                  color: Colors.amber.withAlpha(77),
                 ),
               ),
               child: Row(
@@ -255,7 +254,8 @@ class ProfileHeader extends ConsumerWidget {
           if (isEditable) ...[
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              onPressed: () => context.goNamed('edit_profile'),
+              // KORREKTUR: goNamed -> pushNamed
+              onPressed: () => context.pushNamed('edit_profile'),
               icon: const Icon(Icons.edit, size: 18),
               label: const Text('Profil bearbeiten'),
               style: OutlinedButton.styleFrom(
@@ -282,8 +282,8 @@ class ProfileHeader extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primaryColor.withValues(alpha: 0.8),
-            AppColors.gradientEnd.withValues(alpha: 0.8),
+            AppColors.primaryColor.withAlpha(204),
+            AppColors.gradientEnd.withAlpha(204),
           ],
         ),
       ),

@@ -1,4 +1,3 @@
-// lib/features/auth/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grow_tracker/core/constants/app_colors.dart';
@@ -116,7 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.goNamed('welcome'),
+          // KORREKTUR 1: goNamed -> pop
+          onPressed: () => context.pop(),
         ),
         title: const Text('Willkommen zurück!',
             style: TextStyle(color: Colors.white)),
@@ -240,7 +240,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.goNamed('register');
+                            // KORREKTUR 2: goNamed -> pushNamed
+                            context.pushNamed('register');
                           },
                           child: const Text(
                             AppStrings.signUp,

@@ -1,4 +1,3 @@
-// lib/features/dashboard/widgets/recent_activity_section.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -193,7 +192,8 @@ class RecentActivitySection extends ConsumerWidget {
           final activity = activities[index];
           return _ActivityTile(
             activity: activity,
-            onTap: () => context.goNamed(
+            // KORREKTUR: goNamed -> pushNamed
+            onTap: () => context.pushNamed(
               'plant_detail',
               pathParameters: {'plantId': activity.plant.id},
             ),

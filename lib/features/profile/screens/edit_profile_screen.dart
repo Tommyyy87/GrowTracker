@@ -1,8 +1,7 @@
-// lib/features/profile/screens/edit_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart'; // FIXED: Missing import
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
@@ -125,13 +124,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color:
-                                  AppColors.primaryColor.withValues(alpha: 0.3),
+                              color: AppColors.primaryColor.withAlpha(77),
                               width: 3,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
+                                color: Colors.black.withAlpha(26),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -164,7 +162,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
+                                    color: Colors.black.withAlpha(51),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
@@ -299,7 +297,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: Colors.orange.withAlpha(26),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(Icons.lock_outline,
@@ -317,7 +315,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           leading: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
+                              color: Colors.red.withAlpha(26),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(Icons.delete_outline,
@@ -328,7 +326,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               'Alle Daten werden unwiderruflich gelöscht'),
                           trailing:
                               const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => context.goNamed('account_management'),
+                          // KORREKTUR: goNamed -> pushNamed
+                          onTap: () => context.pushNamed('account_management'),
                         ),
                       ],
                     ),
@@ -418,8 +417,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         shape: BoxShape.circle,
         gradient: LinearGradient(
           colors: [
-            AppColors.primaryColor.withValues(alpha: 0.8),
-            AppColors.gradientEnd.withValues(alpha: 0.8),
+            AppColors.primaryColor.withAlpha(204),
+            AppColors.gradientEnd.withAlpha(204),
           ],
         ),
       ),
@@ -535,7 +534,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               title: const Text('Kamera'),
               onTap: () {
                 Navigator.pop(context);
-                _uploadAvatar(ImageSource.camera); // FIXED: Now accessible
+                _uploadAvatar(ImageSource.camera);
               },
             ),
             ListTile(
@@ -543,7 +542,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               title: const Text('Galerie'),
               onTap: () {
                 Navigator.pop(context);
-                _uploadAvatar(ImageSource.gallery); // FIXED: Now accessible
+                _uploadAvatar(ImageSource.gallery);
               },
             ),
           ],
@@ -553,7 +552,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _uploadAvatar(ImageSource source) async {
-    // FIXED: Parameter type now available
     final controller = ref.read(profileControllerProvider.notifier);
     final success = await controller.uploadAvatar(source);
 

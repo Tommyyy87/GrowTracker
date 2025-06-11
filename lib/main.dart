@@ -1,5 +1,7 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+// KORREKTUR: Tippfehler im Paketnamen behoben
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
@@ -24,35 +26,20 @@ void main() async {
   }
 }
 
-class MyApp extends StatefulWidget {
+// KORREKTUR: Zu ConsumerWidget geändert, um auf Provider zuzugreifen
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Den Router vom Provider abrufen
+    final router = ref.watch(routerProvider);
 
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-
-    // Auth-Status-Änderungen überwachen
-    SupabaseService.client.auth.onAuthStateChange.listen((data) {
-      final session = data.session;
-      if (session != null) {
-        debugPrint('User logged in: ${session.user.email}');
-      } else {
-        debugPrint('User logged out');
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'GrowTracker',
+      // KORREKTUR: Ursprüngliche, einfache Theme-Konfiguration wiederhergestellt
       theme: AppTheme.lightTheme,
-      routerConfig: AppRouter.router,
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
   }

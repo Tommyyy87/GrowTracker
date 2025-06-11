@@ -249,7 +249,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withAlpha(13),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -262,10 +262,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withValues(alpha: 0.1),
+                    color: AppColors.primaryColor.withAlpha(26),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.eco_rounded,
                     size: 50,
                     color: AppColors.primaryColor,
@@ -303,7 +303,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => context.goNamed('add_plant'),
+                    onPressed: () => context.pushNamed('add_plant'),
                     icon: const Icon(Icons.add_circle_outline),
                     label: const Text('Erste Pflanze hinzufügen'),
                     style: ElevatedButton.styleFrom(
@@ -376,12 +376,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _handleMenuAction(String action) {
     switch (action) {
       case 'profile':
-        // FIXED: Navigate to profile screen instead of showing snackbar
-        context.goNamed('profile');
+        context.pushNamed('profile');
         break;
       case 'settings':
-        // FIXED: Navigate to settings screen instead of showing snackbar
-        context.goNamed('settings');
+        context.pushNamed('settings');
         break;
       case 'export':
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,4 +1,3 @@
-// lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grow_tracker/core/constants/app_colors.dart';
@@ -106,7 +105,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.goNamed('welcome'),
+          // KORREKTUR 1: goNamed -> pop
+          onPressed: () => context.pop(),
         ),
         title: const Text(AppStrings.registerTitle,
             style: TextStyle(color: Colors.white)),
@@ -222,7 +222,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.goNamed('login');
+                            // KORREKTUR 2: goNamed -> pushNamed
+                            context.pushNamed('login');
                           },
                           child: const Text(
                             AppStrings.signIn,

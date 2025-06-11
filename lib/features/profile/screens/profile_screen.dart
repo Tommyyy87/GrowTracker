@@ -1,3 +1,4 @@
+// lib/features/profile/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -51,6 +52,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          // KORREKTUR: Robuste Zurück-Navigation
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed('dashboard');
+            }
+          },
+        ),
         title: const Text(
           'Mein Profil',
           style: TextStyle(
@@ -110,7 +122,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Profile Header
                   rankingAsync.when(
                     data: (ranking) => ProfileHeader(
                       profile: profile,
@@ -126,10 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       isEditable: true,
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Social Proof Messages
                   FutureBuilder<Map<String, String>>(
                     future: ref
                         .read(profileControllerProvider.notifier)
@@ -147,8 +155,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       return const SizedBox.shrink();
                     },
                   ),
-
-                  // Statistics Card
                   rankingAsync.when(
                     data: (ranking) => ProfileStatsCard(
                       profile: profile,
@@ -157,22 +163,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     loading: () => ProfileStatsCard(profile: profile),
                     error: (_, __) => ProfileStatsCard(profile: profile),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Achievements Card
                   AchievementCard(
                     unlockedAchievements: _unlockedAchievements,
                     availableAchievements: _availableAchievements,
                     onViewAll: () => _showAllAchievements(),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Quick Actions
                   _buildQuickActionsCard(),
-
-                  const SizedBox(height: 100), // Bottom padding
+                  const SizedBox(height: 100),
                 ],
               ),
             );
@@ -455,7 +454,6 @@ class _AllAchievementsSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Handle
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 40,
@@ -465,10 +463,7 @@ class _AllAchievementsSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
@@ -499,10 +494,7 @@ class _AllAchievementsSheet extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Achievements List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20),
