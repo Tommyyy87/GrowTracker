@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../data/models/harvest.dart';
 import '../../../../data/models/plant.dart';
-import '../../../../data/repositories/plant_repository.dart';
 import '../../../../data/services/supabase_service.dart';
 import '../../controllers/plant_controller.dart';
 import '../dialogs/add_note_dialog.dart';
