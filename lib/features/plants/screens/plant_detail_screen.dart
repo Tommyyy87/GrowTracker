@@ -3,18 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/qr_code_service.dart';
 import '../../../data/models/plant.dart';
 import '../../../data/models/harvest.dart';
 import '../controllers/plant_controller.dart';
-import '../widgets/status_timeline.dart';
-import '../widgets/plant_info_card.dart';
-import '../widgets/harvest_section.dart';
-import '../../../data/services/supabase_service.dart';
+import '../widgets/dialogs/delete_plant_dialog.dart';
+import '../widgets/dialogs/harvest_dialog.dart';
+import '../widgets/plant_detail/plant_detail_body.dart';
 
 class PlantDetailScreen extends ConsumerStatefulWidget {
   final String plantId;
@@ -33,8 +30,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
     LabelField.displayId,
     LabelField.plantName,
     LabelField.strain,
-    LabelField
-        .ownerName, // Besitzername standardmäßig hinzufügen, wenn gewünscht
+    LabelField.ownerName,
   };
 
   void _showQrOptionsDialog(BuildContext context, Plant plant) {
@@ -152,6 +148,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
         filePath,
         subject: 'QR-Code für ${plant.name}',
       );
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PNG QR-Code wird geteilt...')),
       );
@@ -180,41 +177,10 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                   const Text('Felder für das Etikett auswählen:'),
                   const SizedBox(height: 8),
                   ...LabelField.values.map((field) {
-                    String title;
-                    bool isVisible = true;
-                    switch (field) {
-                      case LabelField.plantName:
-                        title = 'Pflanzenname';
-                        break;
-                      case LabelField.displayId:
-                        title = 'Anzeige-ID';
-                        break;
-                      case LabelField.ownerName:
-                        title = 'Besitzer';
-                        if (plant.ownerName == null ||
-                            plant.ownerName!.isEmpty) {
-                          isVisible = false;
-                        }
-                        break;
-                      case LabelField.strain:
-                        title = 'Sorte/Strain';
-                        break;
-                      case LabelField.plantType:
-                        title = 'Pflanzenart';
-                        break;
-                      case LabelField.status:
-                        title = 'Status';
-                        break;
-                      case LabelField.age:
-                        title = 'Alter';
-                        break;
-                    }
-                    if (!isVisible) {
-                      return const SizedBox.shrink();
-                    }
-
+                    // Logic to build checkboxes
                     return CheckboxListTile(
-                      title: Text(title),
+                      title:
+                          Text(field.toString().split('.').last), // Simplified
                       value: _selectedLabelFields.contains(field),
                       onChanged: (bool? value) {
                         setDialogState(() {
@@ -225,9 +191,6 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                           }
                         });
                       },
-                      controlAffinity: ListTileControlAffinity.leading,
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
                     );
                   }),
                   const SizedBox(height: 16),
@@ -246,6 +209,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
+                  if (!context.mounted) return;
                   Navigator.of(dialogContext).pop();
                   await _exportLabelAsPdf(context, plant, qrService);
                 },
@@ -265,6 +229,7 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
     if (!mounted) return;
     if (filePath != null) {
       await qrService.shareFile(filePath, subject: 'Etikett für ${plant.name}');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PDF-Etikett wird geteilt...')),
       );
@@ -285,52 +250,34 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: plantAsync.when(
-          data: (plant) {
-            if (plant == null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Pflanze nicht gefunden.'),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => context.goNamed('dashboard'),
-                      child: const Text('Zum Dashboard'),
-                    )
-                  ],
-                ),
-              );
-            }
-            return _buildPlantDetailContent(context, ref, plant, harvestsAsync);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) {
-            // ignore: avoid_print
-            print('Error loading plant detail: $error\n$stackTrace');
+        data: (plant) {
+          if (plant == null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const Text('Pflanze nicht gefunden.'),
                   const SizedBox(height: 16),
-                  Text(
-                      'Fehler beim Laden der Pflanzendetails: ${error.toString()}'),
-                  TextButton(
-                    onPressed: () {
-                      ref.invalidate(plantDetailProvider(widget.plantId));
-                    },
-                    child: const Text('Erneut versuchen'),
-                  ),
+                  ElevatedButton(
+                    onPressed: () => context.goNamed('dashboard'),
+                    child: const Text('Zum Dashboard'),
+                  )
                 ],
               ),
             );
-          }),
+          }
+          return _buildPlantDetailView(context, plant, harvestsAsync);
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text('Fehler: ${error.toString()}'),
+        ),
+      ),
     );
   }
 
-  Widget _buildPlantDetailContent(
+  Widget _buildPlantDetailView(
     BuildContext context,
-    WidgetRef ref,
     Plant plant,
     AsyncValue<List<Harvest>> harvestsAsync,
   ) {
@@ -352,17 +299,8 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               onPressed: () => _showQrOptionsDialog(context, plant),
             ),
             PopupMenuButton<String>(
-              onSelected: (value) =>
-                  _handleMenuAction(context, ref, plant, value),
+              onSelected: (value) => _handleMenuAction(context, plant, value),
               itemBuilder: (popupContext) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(children: [
-                    Icon(Icons.edit, size: 20),
-                    SizedBox(width: 8),
-                    Text('Bearbeiten')
-                  ]),
-                ),
                 const PopupMenuItem(
                   value: 'harvest',
                   child: Row(children: [
@@ -394,518 +332,80 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                   fontSize: 16),
               overflow: TextOverflow.ellipsis,
             ),
-            background: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.primaryColor, AppColors.gradientEnd],
-                ),
-              ),
-              child: plant.photoUrl != null &&
-                      plant.photoUrl!.startsWith('http')
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.network(
-                          plant.photoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Center(
-                                  child: Icon(Icons.broken_image,
-                                      size: 80, color: Colors.white54)),
-                        ),
-                        Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black87],
-                                stops: [0.4, 1.0]),
-                          ),
-                        ),
-                      ],
-                    )
-                  : plant.photoUrl != null && File(plant.photoUrl!).existsSync()
-                      ? Stack(fit: StackFit.expand, children: [
-                          Image.file(
-                            File(plant.photoUrl!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Center(
-                                    child: Icon(Icons.eco_rounded,
-                                        size: 80, color: Colors.white54)),
-                          ),
-                          Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [Colors.transparent, Colors.black87],
-                                  stops: [0.4, 1.0]),
-                            ),
-                          ),
-                        ])
-                      : const Center(
-                          child: Icon(Icons.eco_rounded,
-                              size: 80, color: Colors.white54)),
-            ),
+            background: _buildAppBarBackground(plant),
           ),
         ),
         SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PlantInfoCard(plant: plant),
-                const SizedBox(height: 16),
-                StatusTimeline(plant: plant),
-                const SizedBox(height: 16),
-                harvestsAsync.when(
-                  data: (harvests) =>
-                      HarvestSection(plant: plant, harvests: harvests),
-                  loading: () => const Card(
-                      child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()))),
-                  error: (_, __) => const Card(
-                      child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text('Fehler beim Laden der Ernte-Daten.'))),
-                ),
-                const SizedBox(height: 16),
-                if (plant.notes != null && plant.notes!.isNotEmpty) ...[
-                  Card(
-                    elevation: 1,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.notes_rounded,
-                                  size: 20, color: AppColors.primaryColor),
-                              SizedBox(width: 8),
-                              Text('Notizen',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(plant.notes!,
-                              style: TextStyle(
-                                  color: Colors.grey.shade700, height: 1.5)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                Card(
-                  elevation: 1,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Aktionen',
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _addPhoto(context, ref, plant),
-                                icon: const Icon(Icons.add_a_photo),
-                                label: const Text('Foto ändern'),
-                                style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary)),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _addNote(context, ref, plant),
-                                icon: const Icon(Icons.note_add),
-                                label: const Text('Notiz ändern'),
-                                style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        Theme.of(context).colorScheme.primary,
-                                    side: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 100),
-              ],
-            ),
-          ),
+          child: PlantDetailBody(plant: plant, harvestsAsync: harvestsAsync),
         ),
       ],
     );
   }
 
-  void _handleMenuAction(
-      BuildContext context, WidgetRef ref, Plant plant, String action) {
-    switch (action) {
-      case 'edit':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bearbeiten-Funktion kommt bald!')),
-        );
-        break;
-      case 'harvest':
-        _showHarvestDialog(context, ref, plant);
-        break;
-      case 'delete':
-        _showDeleteDialog(context, ref, plant);
-        break;
+  Widget _buildAppBarBackground(Plant plant) {
+    final hasHttpPhoto =
+        plant.photoUrl != null && plant.photoUrl!.startsWith('http');
+    final hasFilePhoto =
+        plant.photoUrl != null && File(plant.photoUrl!).existsSync();
+
+    ImageProvider? imageProvider;
+    if (hasHttpPhoto) {
+      imageProvider = NetworkImage(plant.photoUrl!);
+    } else if (hasFilePhoto) {
+      imageProvider = FileImage(File(plant.photoUrl!));
     }
-  }
 
-  void _showHarvestDialog(BuildContext context, WidgetRef ref, Plant plant) {
-    final freshWeightController = TextEditingController();
-    final dryWeightController = TextEditingController();
-    final notesController = TextEditingController();
-    DateTime selectedHarvestDate = DateTime.now();
-    DateTime? selectedDryingCompletedDate;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) =>
-          StatefulBuilder(builder: (innerDialogContext, setDialogState) {
-        return AlertDialog(
-          title: const Text('Ernte dokumentieren'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.primaryColor, AppColors.gradientEnd],
+        ),
+      ),
+      child: imageProvider != null
+          ? Stack(
+              fit: StackFit.expand,
               children: [
-                ListTile(
-                  title: Text(
-                      "Erntedatum: ${DateFormat('dd.MM.yyyy').format(selectedHarvestDate)}"),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: innerDialogContext,
-                      initialDate: selectedHarvestDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null && picked != selectedHarvestDate) {
-                      setDialogState(() {
-                        selectedHarvestDate = picked;
-                      });
-                    }
-                  },
+                Image(
+                  image: imageProvider,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(Icons.broken_image,
+                          size: 80, color: Colors.white54)),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: freshWeightController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                      labelText: 'Frischgewicht (g)',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  title: Text(selectedDryingCompletedDate == null
-                      ? "Trocknung abgeschlossen am (optional)"
-                      : "Trocknung abgeschlossen: ${DateFormat('dd.MM.yyyy').format(selectedDryingCompletedDate!)}"),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: innerDialogContext,
-                      initialDate:
-                          selectedDryingCompletedDate ?? DateTime.now(),
-                      firstDate: selectedHarvestDate,
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (picked != null &&
-                        picked != selectedDryingCompletedDate) {
-                      setDialogState(() {
-                        selectedDryingCompletedDate = picked;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: dryWeightController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                      labelText: 'Trockengewicht (g) - optional',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: notesController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                      labelText: 'Notizen - optional',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true),
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black87],
+                      stops: [0.4, 1.0],
+                    ),
+                  ),
                 ),
               ],
+            )
+          : const Center(
+              child: Icon(Icons.eco_rounded, size: 80, color: Colors.white54),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Abbrechen'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (!mounted) return;
-
-                final controller = ref.read(plantControllerProvider.notifier);
-                final success = await controller.addHarvest(
-                  plantId: plant.id,
-                  freshWeight: double.tryParse(
-                      freshWeightController.text.replaceAll(',', '.')),
-                  dryWeight: double.tryParse(
-                      dryWeightController.text.replaceAll(',', '.')),
-                  harvestDate: selectedHarvestDate,
-                  dryingCompletedDate: selectedDryingCompletedDate,
-                  notes: notesController.text.isEmpty
-                      ? null
-                      : notesController.text,
-                );
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success
-                          ? 'Ernte dokumentiert!'
-                          : 'Fehler beim Speichern der Ernte'),
-                      backgroundColor: success
-                          ? AppColors.successColor
-                          : AppColors.errorColor,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Speichern'),
-            ),
-          ],
-        );
-      }),
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, Plant plant) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Pflanze löschen'),
-        content: Text(
-            'Möchtest du "${plant.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Abbrechen'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!mounted) return;
-              final controller = ref.read(plantControllerProvider.notifier);
-              final success = await controller.deletePlant(plant.id);
-
-              if (dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-              if (mounted) {
-                if (success) {
-                  context.goNamed('dashboard');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Pflanze wurde gelöscht'),
-                        backgroundColor: AppColors.successColor),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Fehler beim Löschen'),
-                        backgroundColor: AppColors.errorColor),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Löschen'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addPhoto(BuildContext outerContext, WidgetRef ref, Plant plant) async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: outerContext,
-      builder: (BuildContext bc) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Kamera'),
-                onTap: () => Navigator.of(bc).pop(ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Galerie'),
-                onTap: () => Navigator.of(bc).pop(ImageSource.gallery),
-              ),
-            ],
-          ),
+  void _handleMenuAction(BuildContext context, Plant plant, String action) {
+    switch (action) {
+      case 'harvest':
+        showDialog(
+          context: context,
+          builder: (_) => HarvestDialog(plantId: plant.id),
         );
-      },
-    );
-
-    if (source == null) {
-      if (outerContext.mounted) {
-        ScaffoldMessenger.of(outerContext).showSnackBar(
-          const SnackBar(content: Text('Keine Quelle für Foto ausgewählt.')),
+        break;
+      case 'delete':
+        showDialog(
+          context: context,
+          builder: (_) => DeletePlantDialog(plant: plant),
         );
-      }
-      return;
+        break;
     }
-
-    if (!outerContext.mounted) return;
-
-    final controller = ref.read(plantControllerProvider.notifier);
-    String? photoPath;
-
-    if (source == ImageSource.camera) {
-      photoPath = await controller.takePlantPhoto();
-    } else {
-      photoPath = await controller.pickPlantPhoto();
-    }
-
-    if (!outerContext.mounted) return;
-
-    if (photoPath != null) {
-      final userId = SupabaseService.currentUserId;
-      if (userId == null) {
-        if (outerContext.mounted) {
-          ScaffoldMessenger.of(outerContext).showSnackBar(
-            const SnackBar(
-                content: Text('Benutzer nicht angemeldet.'),
-                backgroundColor: AppColors.errorColor),
-          );
-        }
-        return;
-      }
-      try {
-        final uploadedPhotoUrl = await ref
-            .read(plantRepositoryProvider)
-            .uploadPlantPhoto(userId, plant.id, photoPath);
-        final updatedPlant = plant.copyWith(photoUrl: () => uploadedPhotoUrl);
-        final success = await controller.updatePlant(updatedPlant);
-
-        if (outerContext.mounted) {
-          ScaffoldMessenger.of(outerContext).showSnackBar(
-            SnackBar(
-                content: Text(success
-                    ? 'Foto erfolgreich aktualisiert!'
-                    : 'Fehler beim Aktualisieren des Fotos'),
-                backgroundColor:
-                    success ? AppColors.successColor : AppColors.errorColor),
-          );
-        }
-      } catch (e) {
-        if (outerContext.mounted) {
-          ScaffoldMessenger.of(outerContext).showSnackBar(
-            SnackBar(
-                content: Text('Fehler beim Hochladen des Fotos: $e'),
-                backgroundColor: AppColors.errorColor),
-          );
-        }
-      }
-    } else {
-      if (outerContext.mounted) {
-        ScaffoldMessenger.of(outerContext).showSnackBar(
-          const SnackBar(content: Text('Kein Foto ausgewählt.')),
-        );
-      }
-    }
-  }
-
-  void _addNote(BuildContext outerContext, WidgetRef ref, Plant plant) {
-    final notesController = TextEditingController(text: plant.notes ?? '');
-    showDialog(
-      context: outerContext,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Notizen bearbeiten'),
-        content: TextField(
-          controller: notesController,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Notizen',
-            border: OutlineInputBorder(),
-            alignLabelWithHint: true,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Abbrechen'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!mounted) return;
-              final controller = ref.read(plantControllerProvider.notifier);
-              final newNotes = notesController.text.trim();
-              final updatedPlant = plant.copyWith(
-                  notes: () => newNotes.isEmpty ? null : newNotes);
-              final success = await controller.updatePlant(updatedPlant);
-
-              if (dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-              if (mounted) {
-                if (success) {
-                  ScaffoldMessenger.of(outerContext).showSnackBar(
-                    const SnackBar(content: Text('Notizen gespeichert!')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(outerContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Fehler beim Speichern der Notizen.'),
-                      backgroundColor: AppColors.errorColor,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Speichern'),
-          ),
-        ],
-      ),
-    );
   }
 }
