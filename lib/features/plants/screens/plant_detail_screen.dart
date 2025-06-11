@@ -142,13 +142,13 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
   Future<void> _exportQrAsPng(
       BuildContext context, Plant plant, QrCodeService qrService) async {
     final filePath = await qrService.createQrCodePngFile(plant);
-    if (!mounted) return;
+    if (!context.mounted) return;
     if (filePath != null) {
       await qrService.shareFile(
         filePath,
         subject: 'QR-Code für ${plant.name}',
       );
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PNG QR-Code wird geteilt...')),
       );
@@ -209,8 +209,10 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (!context.mounted) return;
+                  // The context from the dialog builder might be different
+                  // so we pop it first.
                   Navigator.of(dialogContext).pop();
+                  // Then call the export function with the original screen context.
                   await _exportLabelAsPdf(context, plant, qrService);
                 },
                 child: const Text('PDF erstellen & Teilen'),
@@ -226,10 +228,10 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
       BuildContext context, Plant plant, QrCodeService qrService) async {
     final filePath =
         await qrService.createPlantLabelPdfFile(plant, _selectedLabelFields);
-    if (!mounted) return;
+    if (!context.mounted) return;
     if (filePath != null) {
       await qrService.shareFile(filePath, subject: 'Etikett für ${plant.name}');
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PDF-Etikett wird geteilt...')),
       );
