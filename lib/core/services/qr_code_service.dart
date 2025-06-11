@@ -6,7 +6,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -100,27 +99,9 @@ class QrCodeService {
     final pdf = pw.Document();
     final qrData = plant.id;
 
-    ByteData? regularFontData;
-    ByteData? boldFontData;
-    try {
-      regularFontData =
-          await rootBundle.load("assets/fonts/Roboto-Regular.ttf");
-      boldFontData = await rootBundle.load("assets/fonts/Roboto-Bold.ttf");
-    } catch (e) {
-      // ignore: avoid_print
-      print(
-          "Roboto-Schriftarten konnten nicht geladen werden: $e. Standard-PDF-Schriftarten werden verwendet.");
-    }
-
-    final pw.Font? regularTtf =
-        regularFontData != null ? pw.Font.ttf(regularFontData) : null;
-    final pw.Font? boldTtf =
-        boldFontData != null ? pw.Font.ttf(boldFontData) : null;
-
-    final pw.ThemeData theme = pw.ThemeData.withFont(
-      base: regularTtf ?? await PdfGoogleFonts.robotoRegular(),
-      bold: boldTtf ?? await PdfGoogleFonts.robotoBold(),
-    );
+    // KORREKTUR: Lade nur noch die eine Variable-Font-Datei.
+    final fontData = await rootBundle.load("assets/fonts/Roboto-Variable.ttf");
+    final ttf = pw.Font.ttf(fontData);
 
     const PdfPageFormat labelFormat = PdfPageFormat(
         7 * PdfPageFormat.cm, 4 * PdfPageFormat.cm,
@@ -129,10 +110,11 @@ class QrCodeService {
     pdf.addPage(
       pw.Page(
         pageFormat: labelFormat,
-        theme: theme,
+        // Wir verwenden die geladene Schriftart für das gesamte PDF-Theme.
+        // Das 'pdf'-Paket kann 'bold' aus der variablen Schriftart ableiten.
+        theme: pw.ThemeData.withFont(base: ttf, bold: ttf),
         build: (pw.Context context) {
           List<pw.Widget> content = [];
-          final defaultBoldFont = boldTtf ?? pw.Font.helveticaBold();
 
           content.add(
             pw.Container(
@@ -148,33 +130,27 @@ class QrCodeService {
           content.add(pw.SizedBox(height: 0.2 * PdfPageFormat.cm));
 
           if (selectedFields.contains(LabelField.displayId)) {
-            content
-                .add(_buildPdfTextRow('ID:', plant.displayId, defaultBoldFont));
+            content.add(_buildPdfTextRow('ID:', plant.displayId));
           }
           if (selectedFields.contains(LabelField.plantName)) {
-            content.add(_buildPdfTextRow('Name:', plant.name, defaultBoldFont));
+            content.add(_buildPdfTextRow('Name:', plant.name));
           }
           if (selectedFields.contains(LabelField.ownerName) &&
               plant.ownerName != null &&
               plant.ownerName!.isNotEmpty) {
-            content.add(_buildPdfTextRow(
-                'Besitzer:', plant.ownerName!, defaultBoldFont));
+            content.add(_buildPdfTextRow('Besitzer:', plant.ownerName!));
           }
           if (selectedFields.contains(LabelField.strain)) {
-            content
-                .add(_buildPdfTextRow('Sorte:', plant.strain, defaultBoldFont));
+            content.add(_buildPdfTextRow('Sorte:', plant.strain));
           }
           if (selectedFields.contains(LabelField.plantType)) {
-            content.add(_buildPdfTextRow(
-                'Art:', plant.plantType.displayName, defaultBoldFont));
+            content.add(_buildPdfTextRow('Art:', plant.plantType.displayName));
           }
           if (selectedFields.contains(LabelField.status)) {
-            content.add(_buildPdfTextRow(
-                'Status:', plant.status.displayName, defaultBoldFont));
+            content.add(_buildPdfTextRow('Status:', plant.status.displayName));
           }
           if (selectedFields.contains(LabelField.age)) {
-            content.add(_buildPdfTextRow(
-                'Alter:', '${plant.ageInDays} Tage', defaultBoldFont));
+            content.add(_buildPdfTextRow('Alter:', '${plant.ageInDays} Tage'));
           }
 
           return pw.Center(
@@ -190,7 +166,8 @@ class QrCodeService {
     return pdf.save();
   }
 
-  pw.Widget _buildPdfTextRow(String label, String value, pw.Font boldFont) {
+  // KORREKTUR: Die Schriftart muss nicht mehr übergeben werden, da sie aus dem Theme kommt.
+  pw.Widget _buildPdfTextRow(String label, String value) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 1.5),
       child: pw.Row(
@@ -199,7 +176,7 @@ class QrCodeService {
         children: [
           pw.Text(
             label,
-            style: pw.TextStyle(font: boldFont, fontSize: 7),
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
           ),
           pw.SizedBox(width: 2),
           pw.Expanded(
@@ -234,7 +211,6 @@ class QrCodeService {
 
   Future<void> shareFile(String filePath, {String? subject}) async {
     try {
-      // Hinzugefügt: Ignoriert die irreführende "deprecated"-Warnung
       // ignore: deprecated_member_use
       await Share.shareXFiles([XFile(filePath)], subject: subject);
     } catch (e) {
@@ -262,27 +238,28 @@ class QrCodeService {
           Icon(Icons.qr_code_2_rounded, size: 50, color: Colors.grey.shade700),
           const SizedBox(height: 4),
           if (selectedFields.contains(LabelField.displayId))
-            _previewTextRow('ID:', plant.displayId),
+            _previewTextRowPreview('ID:', plant.displayId),
           if (selectedFields.contains(LabelField.plantName))
-            _previewTextRow('Name:', plant.name),
+            _previewTextRowPreview('Name:', plant.name),
           if (selectedFields.contains(LabelField.ownerName) &&
               plant.ownerName != null &&
               plant.ownerName!.isNotEmpty)
-            _previewTextRow('Besitzer:', plant.ownerName!),
+            _previewTextRowPreview('Besitzer:', plant.ownerName!),
           if (selectedFields.contains(LabelField.strain))
-            _previewTextRow('Sorte:', plant.strain),
+            _previewTextRowPreview('Sorte:', plant.strain),
           if (selectedFields.contains(LabelField.plantType))
-            _previewTextRow('Art:', plant.plantType.displayName),
+            _previewTextRowPreview('Art:', plant.plantType.displayName),
           if (selectedFields.contains(LabelField.status))
-            _previewTextRow('Status:', plant.status.displayName),
+            _previewTextRowPreview('Status:', plant.status.displayName),
           if (selectedFields.contains(LabelField.age))
-            _previewTextRow('Alter:', '${plant.ageInDays} Tage'),
+            _previewTextRowPreview('Alter:', '${plant.ageInDays} Tage'),
         ],
       ),
     );
   }
 
-  Widget _previewTextRow(String label, String value) {
+  // Renamed to avoid conflict with the new _buildPdfTextRow
+  Widget _previewTextRowPreview(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),
       child: Text(

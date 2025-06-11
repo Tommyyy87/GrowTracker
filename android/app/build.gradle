@@ -1,7 +1,8 @@
+// android/app/build.gradle
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // Das Flutter Gradle Plugin muss nach den Android und Kotlin Gradle Plugins angewendet werden.
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -24,41 +25,46 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace = "de.growtracker.grow_tracker" // Stelle sicher, dass dies dein Paketname ist
-    compileSdk = 34 // Explizit setzen oder flutter.compileSdkVersion verwenden, wenn es korrekt definiert ist
-    ndkVersion = flutter.ndkVersion
+    namespace "de.growtracker.grow_tracker"
+    // KORREKTUR: compileSdk auf 35 erhöht, wie von den Plugins gefordert.
+    compileSdk 35
+    ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17 // Angleichung an Java 17
-        targetCompatibility = JavaVersion.VERSION_17 // Angleichung an Java 17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '17' // Kotlin JVM-Ziel auf 17 setzen
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
     }
 
     defaultConfig {
-        applicationId = "de.growtracker.grow_tracker"
-        minSdk = flutter.minSdkVersion // Wird normalerweise von Flutter gesetzt (z.B. 21)
-        targetSdk = 34 // Explizit setzen oder flutter.targetSdkVersion verwenden
-        versionCode = flutterVersionCode.toInteger()
-        versionName = flutterVersionName
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId "de.growtracker.grow_tracker"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
+        minSdkVersion 21
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
     }
 
     buildTypes {
         release {
-            // TODO: Füge deine eigene Signaturkonfiguration für den Release-Build hinzu.
-            // Vorerst wird mit den Debug-Keys signiert, damit `flutter run --release` funktioniert.
-            signingConfig = signingConfigs.debug
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig signingConfigs.debug
         }
     }
 }
 
 flutter {
-    source = "../.."
+    source '../..'
 }
 
-dependencies {
-    // Abhängigkeiten werden normalerweise von Flutter-Plugins verwaltet.
-    // Füge hier App-spezifische Android-Abhängigkeiten hinzu, falls nötig.
-}
+dependencies {}

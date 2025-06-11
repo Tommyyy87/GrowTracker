@@ -1,16 +1,4 @@
-buildscript {
-    ext.kotlin_version = '1.9.23' // Überprüfe ggf. die für deine Flutter-Version empfohlene Version
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.4.1' // Aktuelles Android Gradle Plugin
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        // Falls du Firebase nutzt, stelle sicher, dass google-services hier ist:
-        // classpath 'com.google.gms:google-services:4.4.1' // Version prüfen!
-    }
-}
+// android/build.gradle
 
 allprojects {
     repositories {
@@ -22,33 +10,9 @@ allprojects {
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-    
-    // Konfigurationen anwenden, nachdem das Projekt evaluiert wurde,
-    // um sicherzustellen, dass Android-spezifische Eigenschaften verfügbar sind.
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            android {
-                compileSdkVersion 34 // Globale compileSdkVersion für alle Module
-                buildToolsVersion "34.0.0" // Passend zur compileSdkVersion
-
-                defaultConfig {
-                    // minSdkVersion wird typischerweise in app/build.gradle über flutter.minSdkVersion gesetzt
-                    targetSdkVersion 34 // Globale targetSdkVersion
-                }
-
-                compileOptions {
-                    // Stelle sicher, dass dies mit der JDK-Version übereinstimmt, die Gradle verwendet (und die von deinen Plugins unterstützt wird)
-                    // Für Java 17 und AGP 8.x+:
-                    sourceCompatibility JavaVersion.VERSION_17
-                    targetCompatibility JavaVersion.VERSION_17
-                }
-
-                kotlinOptions {
-                    jvmTarget = '17' // Stellt sicher, dass Kotlin-Code für JVM 17 kompiliert wird
-                }
-            }
-        }
-    }
+}
+subprojects {
+    project.evaluationDependsOn(':app')
 }
 
 tasks.register("clean", Delete) {
