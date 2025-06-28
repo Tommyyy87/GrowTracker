@@ -10,7 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../constants/app_strings.dart';
-import '../../../data/models/plant.dart';
+import 'package:grow_tracker/data/models/plant.dart';
 
 enum LabelField {
   plantName,
@@ -20,6 +20,28 @@ enum LabelField {
   plantType,
   status,
   age,
+}
+
+// KORREKTUR: displayName wurde hier hinzugefügt, um den Compiler-Fehler zu beheben.
+extension LabelFieldExtension on LabelField {
+  String get displayName {
+    switch (this) {
+      case LabelField.plantName:
+        return 'Pflanzenname';
+      case LabelField.displayId:
+        return 'ID';
+      case LabelField.ownerName:
+        return 'Besitzer';
+      case LabelField.strain:
+        return 'Sorte/Strain';
+      case LabelField.plantType:
+        return 'Art';
+      case LabelField.status:
+        return 'Status';
+      case LabelField.age:
+        return 'Alter';
+    }
+  }
 }
 
 class QrCodeService {
@@ -99,7 +121,6 @@ class QrCodeService {
     final pdf = pw.Document();
     final qrData = plant.id;
 
-    // KORREKTUR: Lade nur noch die eine Variable-Font-Datei.
     final fontData = await rootBundle.load("assets/fonts/Roboto-Variable.ttf");
     final ttf = pw.Font.ttf(fontData);
 
@@ -110,8 +131,6 @@ class QrCodeService {
     pdf.addPage(
       pw.Page(
         pageFormat: labelFormat,
-        // Wir verwenden die geladene Schriftart für das gesamte PDF-Theme.
-        // Das 'pdf'-Paket kann 'bold' aus der variablen Schriftart ableiten.
         theme: pw.ThemeData.withFont(base: ttf, bold: ttf),
         build: (pw.Context context) {
           List<pw.Widget> content = [];
@@ -166,7 +185,6 @@ class QrCodeService {
     return pdf.save();
   }
 
-  // KORREKTUR: Die Schriftart muss nicht mehr übergeben werden, da sie aus dem Theme kommt.
   pw.Widget _buildPdfTextRow(String label, String value) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 1.5),
@@ -258,7 +276,6 @@ class QrCodeService {
     );
   }
 
-  // Renamed to avoid conflict with the new _buildPdfTextRow
   Widget _previewTextRowPreview(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(top: 2.0),

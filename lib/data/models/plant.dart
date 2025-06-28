@@ -1,9 +1,6 @@
 // lib/data/models/plant.dart
 import 'package:uuid/uuid.dart';
 
-// Enums PlantType, PlantMedium, PlantLocation, PlantStatus bleiben unverändert
-// (Ich lasse sie hier weg, um die Ausgabe kürzer zu halten, sie sind aber weiterhin Teil der Datei)
-
 enum PlantType {
   cannabis('Cannabis'),
   tomato('Tomaten'),
@@ -55,7 +52,7 @@ class Plant {
   final String id;
   final String displayId;
   final String name;
-  final String? ownerName; // NEUES FELD
+  final String? ownerName;
   final PlantType plantType;
   final String strain;
   final String? breeder;
@@ -77,7 +74,7 @@ class Plant {
     required this.id,
     required this.displayId,
     required this.name,
-    this.ownerName, // NEU
+    this.ownerName,
     required this.plantType,
     required this.strain,
     this.breeder,
@@ -98,7 +95,7 @@ class Plant {
 
   factory Plant.create({
     required String name,
-    String? ownerName, // NEU
+    String? ownerName,
     required PlantType plantType,
     required String strain,
     String? breeder,
@@ -124,7 +121,7 @@ class Plant {
       id: newId,
       displayId: displayId,
       name: name,
-      ownerName: ownerName, // NEU
+      ownerName: ownerName,
       plantType: plantType,
       strain: strain,
       breeder: breeder,
@@ -146,7 +143,7 @@ class Plant {
 
   Plant copyWith({
     String? name,
-    String? Function()? ownerName, // Geändert um Nullable zu unterstützen
+    String? Function()? ownerName,
     PlantType? plantType,
     String? strain,
     String? Function()? breeder,
@@ -164,7 +161,7 @@ class Plant {
       id: id,
       displayId: displayId,
       name: name ?? this.name,
-      ownerName: ownerName != null ? ownerName() : this.ownerName, // NEU
+      ownerName: ownerName != null ? ownerName() : this.ownerName,
       plantType: plantType ?? this.plantType,
       strain: strain ?? this.strain,
       breeder: breeder != null ? breeder() : this.breeder,
@@ -193,7 +190,7 @@ class Plant {
       'user_id': userId,
       'display_id': displayId,
       'name': name,
-      'owner_name': ownerName, // NEU (DB Spaltenname: owner_name)
+      'owner_name': ownerName,
       'plant_type': plantType.name,
       'strain': strain,
       'breeder': breeder,
@@ -218,7 +215,7 @@ class Plant {
       userId: json['user_id'] as String,
       displayId: json['display_id'] as String,
       name: json['name'] as String,
-      ownerName: json['owner_name'] as String?, // NEU
+      ownerName: json['owner_name'] as String?,
       plantType: PlantType.values.firstWhere(
         (e) => e.name == json['plant_type'],
         orElse: () => PlantType.other,
@@ -254,7 +251,6 @@ class Plant {
     );
   }
 
-  // Getter bleiben gleich
   int get ageInDays {
     final referenceDate = documentationStartDate;
     final diff = DateTime.now().difference(referenceDate).inDays;
@@ -303,7 +299,6 @@ class Plant {
   }
 
   String get statusColor {
-    // ... (bleibt gleich)
     switch (status) {
       case PlantStatus.seeded:
         return '#8D6E63';
@@ -325,7 +320,6 @@ class Plant {
   }
 
   DateTime get primaryDate {
-    // ... (bleibt gleich)
     if (seedDate != null) {
       return seedDate!;
     }
@@ -336,7 +330,6 @@ class Plant {
   }
 
   String get primaryDateLabel {
-    // ... (bleibt gleich)
     if (seedDate != null) {
       if (germinationDate != null && germinationDate!.isBefore(seedDate!)) {
         if (documentationStartDate.isBefore(germinationDate!)) {

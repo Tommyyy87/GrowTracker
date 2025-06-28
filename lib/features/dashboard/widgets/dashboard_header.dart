@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../../data/services/supabase_service.dart';
-import '../../plants/controllers/plant_controller.dart';
+import 'package:grow_tracker/features/plants/controllers/plant_controller.dart';
+import 'package:grow_tracker/features/profile/controllers/profile_controller.dart';
 
 class DashboardHeader extends ConsumerWidget {
   const DashboardHeader({super.key});
@@ -12,183 +11,207 @@ class DashboardHeader extends ConsumerWidget {
     final hour = DateTime.now().hour;
     if (hour < 12) {
       return 'Guten Morgen';
-    } else if (hour < 18) {
-      return 'Hallo';
-    } else {
-      return 'Guten Abend';
     }
-  }
-
-  String _getUserDisplayName() {
-    final email = SupabaseService.currentUserEmail;
-    if (email != null) {
-      final name = email.split('@')[0];
-      return name.length > 15 ? '${name.substring(0, 12)}...' : name;
+    if (hour < 18) {
+      return 'Guten Tag';
     }
-    return 'Grower';
+    return 'Guten Abend';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(currentUserProfileProvider);
     final plantsAsync = ref.watch(plantsProvider);
+    final theme = Theme.of(context);
+
+    // PlantStatus.problem entspricht dem Index 5 im Enum
+    const int problemStatusIndex = 5;
+    // PlantStatus.abgeschlossen entspricht dem Index 6 im Enum
+    const int abgeschlossenStatusIndex = 6;
+
+    // Ermitteln des Pflanzenstatus-Texts
+    final plantStatusText = plantsAsync.when(
+      data: (plants) {
+        final activePlants = plants
+            .where((p) => p.status.index != abgeschlossenStatusIndex)
+            .toList();
+        if (activePlants.isEmpty) {
+          return 'Keine aktiven Pflanzen';
+        }
+        final unhealthyPlants = activePlants
+            .where((p) => p.status.index == problemStatusIndex)
+            .length;
+        return unhealthyPlants > 0
+            ? '$unhealthyPlants ${unhealthyPlants == 1 ? 'Pflanze' : 'Pflanzen'} benötigt Aufmerksamkeit'
+            : 'Alle Pflanzen sind in Ordnung';
+      },
+      loading: () => 'Lade Pflanzenstatus...',
+      error: (e, s) => 'Status konnte nicht geladen werden',
+    );
+
+    // Ermitteln der Status-Farbe und des Icons
+    final statusColor = plantsAsync.maybeWhen(
+      data: (plants) {
+        final activePlants = plants
+            .where((p) => p.status.index != abgeschlossenStatusIndex)
+            .toList();
+        if (activePlants.isEmpty) return Colors.grey;
+        final unhealthyPlants = activePlants
+            .where((p) => p.status.index == problemStatusIndex)
+            .isNotEmpty;
+        return unhealthyPlants ? Colors.amber.shade700 : Colors.green.shade400;
+      },
+      orElse: () => Colors.grey,
+    );
+
+    final statusIcon = plantsAsync.maybeWhen(
+      data: (plants) {
+        final activePlants = plants
+            .where((p) => p.status.index != abgeschlossenStatusIndex)
+            .toList();
+        if (activePlants.isEmpty) return Icons.info_outline;
+        final unhealthyPlants = activePlants
+            .where((p) => p.status.index == problemStatusIndex)
+            .isNotEmpty;
+        return unhealthyPlants
+            ? Icons.warning_amber_rounded
+            : Icons.check_circle_outline;
+      },
+      orElse: () => Icons.info_outline,
+    );
 
     return Container(
-      // Fix: Explizite Höhe setzen um Overflow zu vermeiden
-      height: 140,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Vereinfachter Header ohne komplexe Statistiken
-          Row(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.primaryColor,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar
-              GestureDetector(
-                onTap: () => context.pushNamed('profile'),
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(51),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withAlpha(77),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Greeting und Status
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_getGreeting()}, ${_getUserDisplayName()}!',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    plantsAsync.when(
-                      data: (plants) {
-                        final activePlants = plants
-                            .where((p) =>
-                                p.status.index < 6) // Nicht abgeschlossen
-                            .length;
-
-                        if (plants.isEmpty) {
-                          return const Text(
-                            'Starte deinen ersten Grow!',
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => context.pushNamed('profile'),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: profileAsync.when(
+                        data: (profile) {
+                          if (profile == null || profile.username.isEmpty) {
+                            return Icon(
+                              Icons.person_outline,
+                              color: theme.colorScheme.onPrimaryContainer,
+                            );
+                          }
+                          return Text(
+                            profile.username[0].toUpperCase(),
                             style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimaryContainer,
                             ),
                           );
-                        }
-
-                        return Text(
-                          '$activePlants aktive Pflanze${activePlants == 1 ? '' : 'n'}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                        );
-                      },
-                      loading: () => const Text(
-                        'Lade deine Grows...',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      ),
-                      error: (_, __) => const Text(
-                        'Willkommen zurück!',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                        },
+                        loading: () => const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                        error: (e, s) => Icon(
+                          Icons.person_outline,
+                          color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Vereinfachte Quick-Info Bar
-          plantsAsync.when(
-            data: (plants) {
-              if (plants.isEmpty) return const SizedBox.shrink();
-
-              final needsAttention = plants.where((plant) {
-                return (plant.daysUntilHarvest != null &&
-                        plant.daysUntilHarvest! <= 7) ||
-                    (plant.daysUntilHarvest != null &&
-                        plant.daysUntilHarvest! < 0);
-              }).length;
-
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(38),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withAlpha(51),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getGreeting(),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white.withAlpha(204),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        profileAsync.when(
+                          data: (profile) => Text(
+                            profile?.username ?? 'Grower',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          loading: () => Container(
+                            height: 24,
+                            width: 150,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(51),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          error: (e, s) => Text(
+                            'Grower',
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    onPressed: () {
+                      // TODO: Implement Notifications
+                    },
+                    icon: const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    tooltip: 'Benachrichtigungen',
+                  ),
+                ],
+              ),
+              const Spacer(),
+              // Status Bar
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withAlpha(38),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      needsAttention > 0
-                          ? Icons.priority_high
-                          : Icons.check_circle,
-                      color: needsAttention > 0
-                          ? Colors.orange.shade200
-                          : Colors.green.shade200,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
+                    Icon(statusIcon, color: statusColor, size: 20),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        needsAttention > 0
-                            ? '$needsAttention Pflanze${needsAttention == 1 ? '' : 'n'} braucht${needsAttention == 1 ? '' : 'en'} Aufmerksamkeit'
-                            : 'Alle Pflanzen sind in Ordnung',
-                        style: const TextStyle(
+                        plantStatusText,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: Colors.white,
-                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (needsAttention > 0)
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white.withAlpha(179),
-                        size: 14,
-                      ),
                   ],
                 ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+              )
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
